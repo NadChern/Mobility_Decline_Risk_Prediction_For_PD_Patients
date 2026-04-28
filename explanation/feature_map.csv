@@ -1,0 +1,21 @@
+feature_name,description,data_type,value_encoding_or_scale
+No_of_years,Years since Parkinson's disease diagnosis,continuous_integer,Non-negative integer years
+Age,Patient age at notebook run date,continuous_integer,Years
+Postural instability present at dx?,Postural instability symptom flag at diagnosis,ordinal_categorical,0 = No; 1 = Yes; 2 = Unknown
+Rigidity present at diagnosis?,Rigidity present at diagnosis,ordinal_categorical,0 = No; 1 = Yes; 2 = Unknown
+Dopaminergic therapy started for participant,Whether dopaminergic therapy has been started,binary_categorical,0 = No; 1 = Yes
+MoCA Total Score,Montreal Cognitive Assessment total score,continuous_numeric,Higher = better cognition
+Freezing of gait in past 36 months,Freezing of gait severity,ordinal_numeric,1-4 per source codebook; 0 may appear after imputation
+lightheaded after standing,Orthostatic lightheadedness from SCOPA-AUT,ordinal_numeric,0 = never; 1 = sometimes; 2 = regularly; 3 = often
+fainted,Fainting frequency from SCOPA-AUT,ordinal_numeric,0 = never; 1 = sometimes; 2 = regularly; 3 = often
+Total Depression Score,GDS-15 total depression score after item reversals,continuous_numeric,Sum of 15 binary items; higher = more depressive burden
+able_weighted_score,Derived mobility summary based on 7 daily activity items: getting on and off the toilet; stepping up and down curbs; getting in and out of a car; getting out of bed into a chair; running errands and shopping; getting off the floor without help; and walking at least 15 minutes,continuous_numeric,Each mobility item is transformed with Gaussian weights: 0=Fully able->0.18; 1=Mostly able->0.53; 2=Moderate difficulty->0.91; 3=Moderate difficulty->0.91; 4=Mostly unable->0.53; 5=Fully unable->0.18; final feature is the sum across 7 items
+MDS-UPDRS PartIV score,MDS-UPDRS Part IV total score,continuous_numeric,Higher = more motor complications
+MDS-UPDRS Part I Score,MDS-UPDRS Part I total score,continuous_numeric,Higher = more non-motor burden
+BMI,Body mass index,continuous_numeric,kg/m^2
+Daytime_Sleepiness,Daytime sleepiness from MDS-UPDRS Part I questionnaire,ordinal_numeric,0-4 scale from normal to severe
+Urinary_Problems,Urinary problems from MDS-UPDRS Part I questionnaire,ordinal_numeric,0-4 scale
+Gait,Clinician-rated gait impairment from MDS-UPDRS Part III,ordinal_numeric,0-4; 101 = unable to rate
+Postural_Stability,Clinician-rated postural stability from MDS-UPDRS Part III,ordinal_numeric,0-4; 101 = unable to rate
+Hoehn_And_Yahr_Stage,Hoehn and Yahr disease stage,ordinal_numeric,0-5; 101 = unable to rate
+Postural_hypotension,Postural hypotension feature flag,ordinal_categorical,0 = No; 1 = Yes; 2 = Uncertain
