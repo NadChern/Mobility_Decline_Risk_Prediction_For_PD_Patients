@@ -4,3 +4,8 @@
 _pycache_/
 Model_Development.rerun.ipynb
 explanation_artifacts/*
+eval.md
+validation_results.xlsx
+validation_results_bad.xlsx
+validation_issues.csv
+llm1.py

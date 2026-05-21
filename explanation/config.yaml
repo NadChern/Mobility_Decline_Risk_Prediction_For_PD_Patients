@@ -1,0 +1,26 @@
+# Explanation Pipeline Configuration
+
+# Debug mode - shows full prompt in console
+debug: true
+
+# SHAP Explanation Settings
+shap:
+  # Cumulative |SHAP| coverage threshold for feature selection
+  # Features are selected until this fraction of total |SHAP| is covered
+  coverage_threshold: 0.90
+
+# LLM Settings (for generating natural language explanations)
+llm:
+  # Provider: "openrouter" or "google"
+  provider: "google"
+
+  # Temperature for LLM generation (0 = deterministic)
+  temperature: 0
+
+  # OpenRouter settings (requires OPENROUTER_API_KEY in .env)
+  openrouter:
+    model: "google/gemini-2.0-flash-001"
+
+  # Google AI settings (requires GOOGLE_API_KEY in .env)
+  google:
+    model: "gemini-3.1-flash-lite"
