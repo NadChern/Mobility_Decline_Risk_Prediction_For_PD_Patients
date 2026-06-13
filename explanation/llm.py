@@ -199,11 +199,7 @@ def _build_prompt(patient_info):
     # Build DATA INPUTS section
     data_inputs = f"""DATA INPUTS:
 Patient ID: {patient_info['patient_id']}
-Final Prediction: {patient_info['final_prediction_label']}
-Probability of Any Fall: {patient_info['fall_probability']:.0%}"""
-
-    if patient_info['has_severity_assessment'] and patient_info['severity_probability'] is not None:
-        data_inputs += f"\nProbability of Moderate Fall: {patient_info['severity_probability']:.0%}"
+Final Prediction: {patient_info['final_prediction_label']}"""
 
     # Build STAGE 1 section (always shown)
     stage1_contributing = _format_features_list(
@@ -254,25 +250,7 @@ Severity-Mitigating Factors:
   • [bullet for each factor]
 """ if patient_info['has_severity_assessment'] else ""
 
-    overview_template = (
-        f"The model estimates a "
-        f"{patient_info['fall_probability']:.0%} probability of any fall"
-    )
-
-    if (
-        patient_info['has_severity_assessment']
-        and patient_info['severity_probability'] is not None
-    ):
-        overview_template += (
-            f" and a "
-            f"{patient_info['severity_probability']:.0%} probability "
-            f"of moderate fall"
-        )
-
-    overview_template += (
-        f", resulting in a classification of "
-        f"{patient_info['final_prediction_label']}."
-    )
+    overview_template = f"The model classified this patient as {patient_info['final_prediction_label']}."
 
     instructions = f"""
 ---
