@@ -9,3 +9,6 @@ validation_results.xlsx
 validation_results_bad.xlsx
 validation_issues.csv
 llm1.py
+llm_eval_plan.md
+evaluation_results/
+

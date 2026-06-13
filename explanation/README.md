@@ -2,179 +2,102 @@
 
 ## Summary
 
-This folder contains the explanation pipeline for the **full two-stage fall prediction model**.
+This package generates patient-specific explanations for the current two-stage fall prediction workflow used in this repository.
 
-The two-stage pipeline predicts fall risk and severity for Parkinson's disease patients:
+- **Stage 1** explains the probability of **any fall** using TreeSHAP (exact, deterministic).
+- **Stage 2** explains **mild vs moderate fall severity** for patients routed forward by Stage 1 using LinearSHAP (exact, deterministic).
+- Feature selection for explanations uses the SHAP coverage threshold defined in [`config.yaml`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/config.yaml).
+- The main runtime output is a console clinical summary. When `debug: true`, the full LLM prompt is also printed.
 
-- **Stage 1** (Random Forest): Predicts probability of **any fall**
-  - class `0` = no fall
-  - class `1` = any fall
+## What The Package Does Now
 
-- **Stage 2** (LinearSVC, calibrated): Predicts **severity** for patients predicted to fall
-  - class `1` = mild falls
-  - class `2` = moderate falls
+The explanation layer loads precomputed model artifacts from `explanation_artifacts/`, builds structured patient explanation data from SHAP values, and sends that data to an LLM for a natural-language clinical summary.
 
-Only patients predicted as "any fall" by Stage 1 are routed to Stage 2 for severity assessment.
+Current behavior:
 
-The explanation pipeline supports both Stage 1-only mode (backward compatible) and full two-stage mode when Stage 2 artifacts are available.
+- Stage 1 explains why the model predicted **no falls** or **any falls**.
+- Stage 2 explains why routed patients were classified as **mild falls** or **moderate falls**.
+- The package expects the **full two-stage artifact set** to be present.
+- The default CLI flow uses a sample patient ID hardcoded in [`__main__.py`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/__main__.py).
 
-## How SHAP Values Are Computed
+## Package Structure
 
-### Stage 1 SHAP Computation
-
-- **Model**: Random Forest (`best_stage1`)
-- **Explainer**: `shap.Explainer` (automatically uses TreeExplainer internally for tree-based models)
-- **Input**: Full test set (`X_test`)
-- **Output**: SHAP values for class 1 (any fall)
-
-### Stage 2 SHAP Computation
-
-- **Model**: Calibrated LinearSVC (`calibrated_stage2`)
-  - LinearSVC wrapped with `CalibratedClassifierCV` to enable probability output
-- **Explainer**: `shap.KernelExplainer` (required for calibrated wrapper since TreeExplainer doesn't support it)
-- **Input**: Only routed patients (`X_routed` where `pred_s1 == 1`)
-- **Output**: SHAP values for class 1 (moderate falls)
-
-### Artifacts Created
-
-**Stage 1 artifacts** (required for explanation pipeline):
-
-| File                     | Description                                                                         |
-| ------------------------ | ----------------------------------------------------------------------------------- |
-| `shap_values_stage1.npy` | SHAP values explaining Stage 1 predictions (one value per feature per patient)      |
-| `X_test.csv`             | Feature values for all test patients (used to show "Patient value" in explanations) |
-| `y_pred_proba.npy`       | Predicted probability of any fall for each patient                                  |
-| `patient_ids_test.csv`   | Patient identifiers to look up specific patients                                    |
-| `routing_mask.npy`       | Stage 1 binary prediction (True = any fall predicted, routes to Stage 2)            |
-
-> **Note on naming:** Stage 1 does not have a separate `y_pred_s1.npy` file because its binary prediction serves as the `routing_mask` for Stage 2. The routing mask IS Stage 1's binary prediction (threshold applied to `y_pred_proba.npy`). Stage 2 has both `y_pred_proba_s2.npy` (probability) and `y_pred_s2.npy` (binary) because it doesn't route to another stage.
-
-**Stage 2 artifacts** (optional - enables full two-stage explanations):
-
-| File                     | Description                                                                     |
-| ------------------------ | ------------------------------------------------------------------------------- |
-| `shap_values_stage2.npy` | SHAP values explaining Stage 2 severity predictions                             |
-| `y_pred_proba_s2.npy`    | Predicted probability of moderate falls for routed patients                     |
-| `y_pred_s2.npy`          | Stage 2 binary prediction (0=mild, 1=moderate)                                  |
-| `y_pred_final.npy`       | Final 3-class predictions combining both stages (0=no fall, 1=mild, 2=moderate) |
-
-## Pipeline Steps
-
-### Step 1. Global Feature Importance
-
-Displays the **Top 10 global feature importance values** for both stages.
-
-For Stage 1 (any fall):
-
-- Computed from Stage 1 SHAP values
-- Shows which features most influence fall risk prediction
-
-For Stage 2 (severity):
-
-- Computed from Stage 2 SHAP values
-- Shows which features most influence severity prediction
-- Only available when Stage 2 artifacts exist
-
-Global feature importance is calculated by:
-
-- Taking the absolute SHAP value for each feature across all patients
-- Averaging those absolute values across patients
-- Sorting features from highest importance to lowest
-
-### Step 2. Explanation Formatter
-
-Builds a patient-specific explanation summary covering both stages.
-
-For the selected patient, it shows:
-
-**Stage 1 (Fall Risk):**
-
-- Predicted probability of any fall
-- Risk level (low/moderate/high)
-- Top 3 risk-increasing factors
-- Top 2 risk-decreasing factors
-
-**Stage 2 (Severity) - if patient was routed:**
-
-- Predicted probability of moderate falls
-- Severity level (likely mild/uncertain/likely moderate)
-- Top 3 severity-increasing factors
-- Top 2 severity-decreasing factors
-
-**Final Prediction:**
-
-- 3-class prediction (no falls / mild falls / moderate falls)
-
-### Step 3. Prompt Generator
-
-Creates the prompt for the LLM using:
-
-- Full two-stage patient-specific explanation data
-- The feature map (`feature_map.csv`) for human-readable context
-
-The prompt instructs the LLM to explain:
-
-1. The final 3-class prediction
-2. Stage 1 factors (why fall risk is high/low)
-3. Stage 2 factors (why severity is mild/moderate) - if applicable
-4. Clinical recommendation
-
-### Step 4. LLM Explanation Generation
-
-Sends the prompt to the LLM and returns the generated explanation.
-
-Uses:
-
-- **LangChain** as the wrapper for the LLM call
-- **OpenRouter** as the model provider
-
-The current default model is:
-
-`nvidia/nemotron-3-super-120b-a12b:free`
-
-## Folder Structure
+The files most relevant to users are:
 
 ```text
 explanation/
-  explanation_layer.py
+  __init__.py
+  __main__.py
+  config.yaml
+  data_loader.py
+  explanation_builder.py
   feature_map.csv
+  llm.py
   README.md
-
-explanation_artifacts/
-  # Stage 1 artifacts (required)
-  shap_values_stage1.npy      # (N_test, N_features) SHAP values for Stage 1
-  X_test.csv                  # (N_test, N_features) patient feature values
-  y_pred_proba.npy            # (N_test,) P(any fall)
-  patient_ids_test.csv        # (N_test,) stable patient identifiers
-
-  # Stage 2 artifacts (optional - enables full pipeline)
-  routing_mask.npy            # (N_test,) bool - which patients went to Stage 2
-  shap_values_stage2.npy      # (N_routed, N_features) SHAP values for Stage 2
-  y_pred_proba_s2.npy         # (N_routed,) P(moderate falls)
-  y_pred_s2.npy               # (N_routed,) Stage 2 predictions (0=mild, 1=moderate)
-  y_pred_final.npy            # (N_test,) Final 3-class predictions
-
-explanation_results/          # planned output folder
-  <PATNO>.md
+  shap_utils.py
+  validate.py
 ```
 
-### Artifact Descriptions
+What they are used for:
 
-| File                     | Shape          | Description                                      |
-| ------------------------ | -------------- | ------------------------------------------------ |
-| `shap_values_stage1.npy` | (351, 21)      | SHAP values for Stage 1 (any fall) predictions   |
-| `X_test.csv`             | (351, 21)      | Patient feature values for the test set          |
-| `y_pred_proba.npy`       | (351,)         | Stage 1 predicted probabilities of any fall      |
-| `patient_ids_test.csv`   | (351,)         | Patient IDs (PATNO) aligned with other artifacts |
-| `routing_mask.npy`       | (351,)         | Boolean mask - True if routed to Stage 2         |
-| `shap_values_stage2.npy` | (N_routed, 21) | SHAP values for Stage 2 (severity) predictions   |
-| `y_pred_proba_s2.npy`    | (N_routed,)    | Stage 2 P(moderate falls) for routed patients    |
-| `y_pred_s2.npy`          | (N_routed,)    | Stage 2 predictions for routed patients          |
-| `y_pred_final.npy`       | (351,)         | Final 3-class predictions (0/1/2)                |
+- `data_loader.py`: loads config, environment variables, feature metadata, and explanation artifacts.
+- `explanation_builder.py`: builds per-patient explanation payloads from SHAP values and predictions.
+- `llm.py`: constructs the prompt and calls the configured LLM provider.
+- `shap_utils.py`: selects top contributing features based on SHAP coverage.
+- `validate.py`: generates a validation spreadsheet with sampled patients and LLM explanations.
+- `config.yaml`: controls debug mode, SHAP coverage threshold, provider, model, and temperature.
+- `feature_map.csv`: maps model feature names to human-readable clinical descriptions.
 
-## How to Run
+## Required Runtime Artifacts
 
-### 1. Activate the environment
+The package currently expects the full two-stage artifact set in `explanation_artifacts/`.
+
+Required files:
+
+- `shap_values_stage1.npy`
+- `X_test.csv`
+- `y_pred_proba.npy`
+- `patient_ids_test.csv`
+- `routing_mask.npy`
+- `shap_values_stage2.npy`
+- `y_pred_s2.npy`
+- `y_pred_final.npy`
+
+Important note:
+
+- The current code does **not** fall back to a Stage 1-only mode.
+- [`data_loader.py`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/data_loader.py) loads Stage 2 artifacts at import time and raises an error if they are missing or misaligned.
+
+## Configuration
+
+Configuration lives in [`config.yaml`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/config.yaml).
+
+Current top-level settings:
+
+- `debug`: when `true`, prints the generated prompt before the clinical summary.
+- `shap.coverage_threshold`: cumulative absolute SHAP coverage target used for feature selection.
+- `llm.provider`: selects `"google"` or `"openrouter"`.
+- `llm.temperature`: generation temperature passed to the LLM client.
+- `llm.openrouter.model`: model name used when the provider is OpenRouter.
+- `llm.google.model`: model name used when the provider is Google.
+
+### API Keys
+
+Environment variables are loaded from the project root `.env` file.
+
+- `GOOGLE_API_KEY`: required when `llm.provider: "google"`
+- `OPENROUTER_API_KEY`: required when `llm.provider: "openrouter"`
+
+At the time of writing, the default configuration is:
+
+- provider: `google`
+- model: `gemini-3.1-flash-lite`
+
+OpenRouter remains supported through the same interface in `llm.py`.
+
+## How To Run
+
+### 1. Activate the local environment
 
 From the project root:
 
@@ -182,115 +105,98 @@ From the project root:
 source .venv/bin/activate
 ```
 
-### 2. Run the model notebook to generate artifacts
+### 2. Generate explanation artifacts
 
-From the project root:
+Run the model notebook so `explanation_artifacts/` contains the full two-stage outputs:
 
 ```bash
 jupyter nbconvert --to notebook --execute Model_Development.ipynb --output Model_Development.rerun.ipynb
 ```
 
-This generates both Stage 1 and Stage 2 explanation artifacts in:
+This step is expected to produce the `.npy` and `.csv` files loaded by `data_loader.py`.
 
-`explanation_artifacts/`
+### 3. Add the required API key to `.env`
 
-**Note:** Stage 2 artifact generation requires the KernelExplainer which can take several minutes to compute SHAP values.
+For the current default provider:
 
-### 3. Create a `.env` file in the project root
+```env
+GOOGLE_API_KEY=your_google_api_key_here
+```
 
-Add your OpenRouter API key:
+If you switch `llm.provider` to OpenRouter in `config.yaml`, use:
 
 ```env
 OPENROUTER_API_KEY=your_openrouter_api_key_here
 ```
 
-Make sure `.env` is included in `.gitignore`.
+### 4. Install missing dependencies if needed
 
-### 4. Install explanation-layer dependencies
-
-If needed, install:
+If the explanation dependencies are not already available in `.venv`, install the packages used by the current provider:
 
 ```bash
-uv pip install --python .venv/bin/python python-dotenv langchain langchain-openrouter
+uv pip install --python .venv/bin/python python-dotenv pyyaml langchain langchain-google-genai langchain-openrouter
 ```
 
-### 5. Run the explanation pipeline
+### 5. Run the explanation CLI
 
 From the project root:
 
 ```bash
-python explanation/explanation_layer.py
+python -m explanation
 ```
 
-or:
+This entrypoint runs [`__main__.py`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/__main__.py), which:
+
+- reads the configured provider and model
+- loads the saved explanation artifacts
+- generates a clinical summary for one sample patient
+
+To inspect a different patient, edit the `patient_id` value in `__main__.py`.
+
+## Validation Utility
+
+[`validate.py`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/validate.py) creates a spreadsheet for manual review of LLM explanations across sampled patients from each prediction class.
+
+Run it from the project root with:
 
 ```bash
-.venv/bin/python explanation/explanation_layer.py
+python -m explanation.validate
 ```
 
-## Backward Compatibility
+What it does:
 
-The explanation layer automatically detects whether Stage 2 artifacts are available:
+- samples patients from the final prediction categories
+- calls the explanation pipeline for each selected patient
+- writes `validation_results.xlsx` in the project root
+- writes a resumable partial file during execution if needed
 
-- **Stage 2 available**: Full two-stage explanations with severity assessment
-- **Stage 2 missing**: Falls back to Stage 1-only explanations
+Output location:
 
-The original Stage 1-only functions remain available:
+- validation spreadsheet: `validation_results.xlsx` in the project root
 
-- `build_patient_explanation_data()` - Stage 1 only
-- `format_explanation()` - Stage 1 only
-- `generate_llm_prompt()` - Stage 1 only
-- `generate_llm_explanation()` - Stage 1 only
+## SHAP Determinism
 
-New full pipeline functions:
+Both SHAP methods used in this pipeline are exact and produce bit-for-bit identical results on every run:
 
-- `build_patient_explanation_data_full()` - Both stages
-- `format_explanation_full()` - Both stages
-- `generate_llm_prompt_full()` - Both stages
-- `generate_llm_explanation_full()` - Both stages
+- **Stage 1 (TreeSHAP)**: exact computation over the RandomForest tree structure — no sampling involved.
+- **Stage 2 (LinearSHAP)**: closed-form `SHAP_i = coef_i × (x_i − E[x_i])` using the full training set mean as background — no randomness.
 
-## Edge Cases
+`Model_Development.ipynb` includes inline determinism checks after each SHAP computation block that assert `np.allclose()` and print max/mean absolute differences (expected: `0.000000000000` for both).
 
-| Scenario                               | Behavior                                 |
-| -------------------------------------- | ---------------------------------------- |
-| Stage 2 artifacts missing              | Falls back to Stage 1-only explanation   |
-| Patient not routed (predicted no fall) | Returns Stage 1 only, stage2=None        |
-| Patient not in test set                | Raises KeyError with descriptive message |
-| Artifact row count mismatch            | Raises ValueError at module load         |
+## Output Locations
 
-## Example Output
+To avoid confusion, the main output locations are:
 
-```
-======================================================================
-FULL TWO-STAGE FALL PREDICTION EXPLANATION
-Patient ID: 101477
-======================================================================
+- `explanation_artifacts/`: runtime model artifacts consumed by the explanation package
+- project root `validation_results.xlsx`: spreadsheet generated by `python -m explanation.validate`
 
-FINAL PREDICTION: Moderate falls predicted
-Routed to Stage 2: Yes
+The current package does **not** implement a standard per-patient markdown export such as `explanation_results/<PATNO>.md`.
 
-----------------------------------------------------------------------
-STAGE 1: Fall Risk Assessment (No Fall vs Any Fall)
-----------------------------------------------------------------------
-Predicted probability of any fall: 0.73
-Risk level: high
+## Common Failure Modes
 
-Risk-increasing factors:
-  1. Neuro_QoL_LE
-     Patient value: 35.00
-     Contribution: +0.142 (global importance: 0.089)
-...
+- Missing API key for the selected provider in `.env`
+- Missing Stage 2 artifacts in `explanation_artifacts/`
+- Row-count mismatch across saved artifact files
+- Missing provider-specific dependency such as `langchain-google-genai` or `langchain-openrouter`
 
-----------------------------------------------------------------------
-STAGE 2: Severity Assessment (Mild vs Moderate Falls)
-----------------------------------------------------------------------
-Predicted probability of moderate falls: 0.62
-Severity level: uncertain (borderline)
-
-Severity-increasing factors (toward moderate):
-  1. Age
-     Patient value: 72.00
-     Contribution: +0.085 (global importance: 0.072)
-...
-======================================================================
-```
+If you hit one of these errors, first verify `config.yaml`, `.env`, and the contents of `explanation_artifacts/`.
