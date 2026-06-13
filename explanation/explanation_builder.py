@@ -9,7 +9,6 @@ from .data_loader import (
     STAGE2_AVAILABLE,
     routing_mask,
     shap_values_stage2,
-    y_pred_proba_s2,
     y_pred_final,
     get_stage2_index_map,
 )
@@ -99,7 +98,6 @@ def build_patient_explanation_data_full(patient_idx, coverage_threshold=COVERAGE
 
     # Determine routing and final prediction
     has_severity_assessment = False
-    severity_probability = None
     severity_increasing_features = []
     severity_decreasing_features = []
     final_prediction = 0  # Default: no fall
@@ -111,12 +109,7 @@ def build_patient_explanation_data_full(patient_idx, coverage_threshold=COVERAGE
     if has_severity_assessment:
         s2_idx = get_stage2_index(patient_idx)
         if s2_idx is not None:
-            # Handle both 2D and 3D SHAP arrays
-            if shap_values_stage2.ndim == 3:
-                patient_shap_s2 = shap_values_stage2[s2_idx, :, 1]  # class 1 (moderate)
-            else:
-                patient_shap_s2 = shap_values_stage2[s2_idx]
-            severity_probability = float(y_pred_proba_s2[s2_idx])
+            patient_shap_s2 = shap_values_stage2[s2_idx]
 
             # Stage 2 features using coverage-based selection
             severity_increasing_features, severity_decreasing_features = select_features_by_coverage(
@@ -132,7 +125,6 @@ def build_patient_explanation_data_full(patient_idx, coverage_threshold=COVERAGE
         "risk_increasing_features": risk_increasing_features,
         "risk_decreasing_features": risk_decreasing_features,
         "has_severity_assessment": has_severity_assessment,
-        "severity_probability": severity_probability,
         "severity_increasing_features": severity_increasing_features,
         "severity_decreasing_features": severity_decreasing_features,
     }
