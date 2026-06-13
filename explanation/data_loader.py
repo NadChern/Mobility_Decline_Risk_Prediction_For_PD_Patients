@@ -75,7 +75,6 @@ if len(y_pred_proba) != len(X_test):
 STAGE2_AVAILABLE = False
 routing_mask = None
 shap_values_stage2 = None
-y_pred_proba_s2 = None
 y_pred_s2 = None
 y_pred_final = None
 _stage2_index_map = None
@@ -84,12 +83,11 @@ _stage2_index_map = None
 def load_stage2_artifacts():
     """Load Stage 2 artifacts. Raises error if missing."""
     global STAGE2_AVAILABLE, routing_mask, shap_values_stage2
-    global y_pred_proba_s2, y_pred_s2, y_pred_final, _stage2_index_map
+    global y_pred_s2, y_pred_final, _stage2_index_map
 
     stage2_files = [
         'routing_mask.npy',
         'shap_values_stage2.npy',
-        'y_pred_proba_s2.npy',
         'y_pred_s2.npy',
         'y_pred_final.npy',
     ]
@@ -107,7 +105,6 @@ def load_stage2_artifacts():
     try:
         routing_mask = np.load(ARTIFACTS_DIR / 'routing_mask.npy')
         shap_values_stage2 = np.load(ARTIFACTS_DIR / 'shap_values_stage2.npy')
-        y_pred_proba_s2 = np.load(ARTIFACTS_DIR / 'y_pred_proba_s2.npy')
         y_pred_s2 = np.load(ARTIFACTS_DIR / 'y_pred_s2.npy')
         y_pred_final = np.load(ARTIFACTS_DIR / 'y_pred_final.npy')
 
@@ -116,8 +113,6 @@ def load_stage2_artifacts():
             raise ValueError("routing_mask.npy length does not match X_test.csv.")
         if routing_mask.sum() != len(shap_values_stage2):
             raise ValueError("shap_values_stage2.npy row count does not match routed patients.")
-        if len(y_pred_proba_s2) != routing_mask.sum():
-            raise ValueError("y_pred_proba_s2.npy length does not match routed patients.")
         if len(y_pred_s2) != routing_mask.sum():
             raise ValueError("y_pred_s2.npy length does not match routed patients.")
         if len(y_pred_final) != len(X_test):
