@@ -6,6 +6,8 @@ import yaml
 from pathlib import Path
 from dotenv import load_dotenv
 
+from .contract import ARTIFACT_FILENAMES, PATIENT_ID_COLUMN
+
 load_dotenv()
 
 # =============================================================================
@@ -53,10 +55,10 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 # =============================================================================
 # Stage 1 Data Loading
 # =============================================================================
-shap_values = np.load(ARTIFACTS_DIR / 'shap_values_stage1.npy')
-X_test = pd.read_csv(ARTIFACTS_DIR / 'X_test.csv')
-y_pred_proba = np.load(ARTIFACTS_DIR / 'y_pred_proba.npy')
-patient_ids = pd.read_csv(ARTIFACTS_DIR / 'patient_ids_test.csv')
+shap_values = np.load(ARTIFACTS_DIR / ARTIFACT_FILENAMES['shap_stage1'])
+X_test = pd.read_csv(ARTIFACTS_DIR / ARTIFACT_FILENAMES['x_test'])
+y_pred_proba = np.load(ARTIFACTS_DIR / ARTIFACT_FILENAMES['y_pred_proba'])
+patient_ids = pd.read_csv(ARTIFACTS_DIR / ARTIFACT_FILENAMES['patient_ids'])
 feature_map = pd.read_csv(FEATURE_MAP_PATH)
 feature_map_lookup = feature_map.set_index('feature_name').to_dict(orient='index')
 
@@ -86,10 +88,10 @@ def load_stage2_artifacts():
     global y_pred_s2, y_pred_final, _stage2_index_map
 
     stage2_files = [
-        'routing_mask.npy',
-        'shap_values_stage2.npy',
-        'y_pred_s2.npy',
-        'y_pred_final.npy',
+        ARTIFACT_FILENAMES['routing_mask'],
+        ARTIFACT_FILENAMES['shap_stage2'],
+        ARTIFACT_FILENAMES['y_pred_s2'],
+        ARTIFACT_FILENAMES['y_pred_final'],
     ]
 
     # Check if all Stage 2 files exist
@@ -98,15 +100,16 @@ def load_stage2_artifacts():
         raise FileNotFoundError(
             f"Stage 2 artifacts not found: {', '.join(missing)}\n"
             f"Expected location: {ARTIFACTS_DIR}\n\n"
-            "To generate Stage 2 artifacts, run the Model_Development.ipynb notebook.\n"
-            "The notebook will create all required files in the explanation_artifacts/ folder."
+            "To generate the artifacts, run the modelling notebook's export cell\n"
+            "(explanation.export.export_explanation_artifacts), which writes all\n"
+            "required files into the explanation_artifacts/ folder."
         )
 
     try:
-        routing_mask = np.load(ARTIFACTS_DIR / 'routing_mask.npy')
-        shap_values_stage2 = np.load(ARTIFACTS_DIR / 'shap_values_stage2.npy')
-        y_pred_s2 = np.load(ARTIFACTS_DIR / 'y_pred_s2.npy')
-        y_pred_final = np.load(ARTIFACTS_DIR / 'y_pred_final.npy')
+        routing_mask = np.load(ARTIFACTS_DIR / ARTIFACT_FILENAMES['routing_mask'])
+        shap_values_stage2 = np.load(ARTIFACTS_DIR / ARTIFACT_FILENAMES['shap_stage2'])
+        y_pred_s2 = np.load(ARTIFACTS_DIR / ARTIFACT_FILENAMES['y_pred_s2'])
+        y_pred_final = np.load(ARTIFACTS_DIR / ARTIFACT_FILENAMES['y_pred_final'])
 
         # Validate Stage 2 artifacts
         if len(routing_mask) != len(X_test):
@@ -131,7 +134,7 @@ def load_stage2_artifacts():
         raise ValueError(
             f"Error loading Stage 2 artifacts: {e}\n\n"
             "The artifact files may be corrupted or have mismatched shapes.\n"
-            "Re-run Model_Development.ipynb to regenerate the artifacts."
+            "Re-run the export cell to regenerate the artifacts."
         ) from e
 
 
