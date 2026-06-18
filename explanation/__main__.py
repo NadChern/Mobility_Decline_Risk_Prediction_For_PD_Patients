@@ -2,18 +2,27 @@
 
 Usage: python -m explanation
 """
-from .data_loader import DEBUG, OPENROUTER_API_KEY
+from .contract import PATIENT_ID_COLUMN
+from .data_loader import (
+    DEBUG, GOOGLE_API_KEY, LLM_PROVIDER, OPENROUTER_API_KEY, patient_ids,
+)
 from .llm import generate_explanation
 
 
-# Change this PATNO to inspect a different patient.
-patient_id = 4022
+# Default to the first patient in the test set so the demo always points at a
+# PATNO that exists in the current artifacts. Override to inspect another.
+patient_id = int(patient_ids[PATIENT_ID_COLUMN].iloc[0])
 
-if not OPENROUTER_API_KEY:
+# Require the key for whichever provider config.yaml selected.
+_required_key = GOOGLE_API_KEY if LLM_PROVIDER == "google" else OPENROUTER_API_KEY
+_required_env = "GOOGLE_API_KEY" if LLM_PROVIDER == "google" else "OPENROUTER_API_KEY"
+
+if not _required_key:
     print(
-        "OPENROUTER_API_KEY is not set in .env.\n"
-        "Install `python-dotenv`, `langchain`, and `langchain-openrouter`,\n"
-        "then add OPENROUTER_API_KEY to .env to run LLM explanation generation."
+        f"{_required_env} is not set in .env, but config.yaml selects "
+        f"provider '{LLM_PROVIDER}'.\n"
+        f"Add {_required_env} to .env (or switch the provider in config.yaml) "
+        "to run LLM explanation generation."
     )
 else:
     try:
