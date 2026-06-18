@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
+from .contract import PATIENT_ID_COLUMN
 from .data_loader import y_pred_final, patient_ids
 from .explanation_builder import build_patient_explanation_data_full
 from .llm import generate_explanation
@@ -121,7 +122,7 @@ def generate_generations(temperatures, n_runs, output_path=GENERATIONS_PATH):
     call_num = 0
 
     for patient_idx in selected_indices:
-        patient_id = int(patient_ids.iloc[patient_idx]["PATNO"])
+        patient_id = int(patient_ids.iloc[patient_idx][PATIENT_ID_COLUMN])
         final_class = int(y_pred_final[patient_idx])
         patient_info = build_patient_explanation_data_full(patient_idx)
 
