@@ -11,6 +11,7 @@ import time
 import pandas as pd
 from pathlib import Path
 _print("Loading data artifacts...")
+from .contract import PATIENT_ID_COLUMN
 from .data_loader import X_test, patient_ids, y_pred_final
 _print("Loading LLM module...")
 from .llm import generate_explanation
@@ -60,7 +61,7 @@ def create_validation_dataset(n_per_category=10, output_path=None, seed=42, max_
         selected = random.sample(indices, min(n_per_category, len(indices)))
 
         for idx in selected:
-            patient_id = int(patient_ids.iloc[idx]["PATNO"])
+            patient_id = int(patient_ids.iloc[idx][PATIENT_ID_COLUMN])
 
             # Skip if already processed
             if patient_id in processed_ids:
