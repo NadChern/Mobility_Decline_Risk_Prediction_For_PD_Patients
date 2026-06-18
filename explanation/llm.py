@@ -1,4 +1,19 @@
-"""LLM explanation generation and formatting."""
+"""LLM explanation generation and formatting.
+
+All deterministic facts — which features (0.90 |SHAP| coverage), values, SHAP sign,
+ordering, routing, prediction, and the display fields (short_name, formatted value,
+interpretation, displayable) — are computed upstream in `explanation_builder`. This module
+only groups those ready-made factors into the two direction tables and asks the LLM to
+render the clinician document (title + Model Prediction + two factor tables + a model
+interpretation). The LLM does layout and synthesis only; it must not alter, add, or drop
+facts (the evaluation checks this).
+
+Direction is expressed as which way a factor pushed the model's prediction:
+  - Stage 1 (No Fall): "Toward No Fall" (SHAP < 0) vs "Toward Fall" (SHAP > 0)
+  - Stage 2 (severity): "Toward Lower Severity (Mild)" (SHAP < 0) vs
+                        "Toward Higher Severity (Moderate)" (SHAP > 0)
+The table supporting the actual prediction is shown first (drivers first).
+"""
 from .data_loader import (
     LLM_PROVIDER,
     LLM_TEMPERATURE,
@@ -11,7 +26,6 @@ from .data_loader import (
 from .explanation_builder import (
     get_patient_index,
     build_patient_explanation_data_full,
-    get_feature_metadata,
 )
 
 
@@ -99,239 +113,141 @@ def build_langchain_llm(provider=None, model_name=None, temperature=LLM_TEMPERAT
         )
 
 
-def _parse_value_label(scale_str, value):
-    """Extract label for a value from scale string like '0 = No; 1 = Yes'.
+_SEVERITY_LABEL = {1: "Mild Falls", 2: "Moderate Falls"}
+_OUTCOME_PHRASE = {
+    0: "No Fall classification",
+    1: "Mild Fall classification",
+    2: "Moderate Fall classification",
+}
 
-    Args:
-        scale_str: Scale description string with value mappings
-        value: The numeric value to look up
+# Stage-2 table headers (fixed wording).
+_HIGHER = "Factors Pushing the Prediction Toward Higher Severity (Moderate)"
+_LOWER = "Factors Pushing the Prediction Toward Lower Severity (Mild)"
+# Stage-1 table headers.
+_TOWARD_FALL = "Factors Pushing the Prediction Toward Fall"
+_TOWARD_NOFALL = "Factors Pushing the Prediction Toward No Fall"
 
-    Returns:
-        Label string if found, None otherwise
+
+def _displayable(factors):
+    """Drop factors flagged non-displayable (NaN / unable-to-rate) by the builder."""
+    return [f for f in factors if f.get("displayable", True)]
+
+
+def _ordered_tables(patient_info):
+    """Return [(header, factors), (header, factors)] in display order.
+
+    The table supporting the actual prediction (the drivers) is listed first. Non-displayable
+    factors are removed. `*_increasing_features` = SHAP > 0, `*_decreasing_features` = SHAP < 0.
     """
-    import re
-
-    # Handle integer values
-    try:
-        int_val = int(value) if float(value) == int(float(value)) else None
-    except (ValueError, TypeError):
-        return None
-
-    if int_val is not None:
-        # Match patterns like "1 = Rare freezing" or "1=Yes"
-        pattern = rf'\b{int_val}\s*=\s*([^;]+)'
-        match = re.search(pattern, scale_str)
-        if match:
-            return match.group(1).strip()
-    return None
-
-
-def _format_value(value, metadata):
-    """Format value consistently based on data type.
-
-    Args:
-        value: The raw value to format
-        metadata: Feature metadata dict with 'data_type' key
-
-    Returns:
-        Formatted value string
-    """
-    data_type = metadata.get('data_type', '')
-
-    try:
-        float_val = float(value)
-    except (ValueError, TypeError):
-        return str(value)  # Return as-is if not numeric
-
-    # Integer-like types: no decimals
-    if data_type in ('continuous_integer', 'ordinal_numeric', 'ordinal_categorical', 'binary_categorical'):
-        return str(int(float_val))
+    fp = patient_info["final_prediction"]
+    if patient_info["has_severity_assessment"]:
+        higher = (_HIGHER, patient_info["severity_increasing_features"])   # toward Moderate
+        lower = (_LOWER, patient_info["severity_decreasing_features"])     # toward Mild
+        tables = [higher, lower] if fp == 2 else [lower, higher]
     else:
-        # Continuous numeric: show decimal only if fractional
-        return str(int(float_val)) if float_val == int(float_val) else f"{float_val:.2f}"
+        toward_fall = (_TOWARD_FALL, patient_info["risk_increasing_features"])
+        toward_nofall = (_TOWARD_NOFALL, patient_info["risk_decreasing_features"])
+        tables = [toward_nofall, toward_fall]
+    return [(header, _displayable(factors)) for header, factors in tables]
 
 
-def _format_features_list(features):
-    """Format features as a numbered list with full context.
+def _bullet_lines(factors):
+    """Render factors as bulleted grounding lines for the prompt."""
+    if not factors:
+        return "  (none)"
+    return "\n".join(
+        f"- {f['short_name']} | value: {f['display_value']} | scale/interpretation: {f['interpretation']}"
+        for f in factors
+    )
 
-    Args:
-        features: List of feature dicts with 'feature', 'patient_value_formatted', 'shap_contribution'
 
-    Returns:
-        Formatted list string
-    """
-    if not features:
-        return "(none identified)"
-
-    lines = []
-    for i, f in enumerate(features, 1):
-        metadata = get_feature_metadata(f['feature'])
-        value = f['patient_value_formatted']
-        impact = f['shap_contribution']
-
-        # Format value consistently
-        formatted_value = _format_value(value, metadata)
-
-        # Try to get value label from scale
-        try:
-            label = _parse_value_label(metadata['value_encoding_or_scale'], float(value))
-        except (ValueError, TypeError):
-            label = None
-        value_display = f"{formatted_value} ({label})" if label else formatted_value
-
-        lines.append(f"{i}. {metadata['description']} (Impact: {impact:+.3f})")
-        lines.append(f"   Value: {value_display}")
-        lines.append(f"   Scale: {metadata['value_encoding_or_scale']}")
-        lines.append("")
-
-    return "\n".join(lines)
+def _model_prediction_block(patient_info):
+    """Render the Model Prediction header lines."""
+    fp = patient_info["final_prediction"]
+    fall = "Fall" if fp in (1, 2) else "No Fall"
+    block = f"- Fall Classification: {fall}"
+    if patient_info["has_severity_assessment"]:
+        block += f"\n- Fall Severity Classification: {_SEVERITY_LABEL.get(fp, '')}"
+    return block
 
 
 def _build_prompt(patient_info):
-    """Build the LLM prompt from patient explanation data.
+    """Build the full-document LLM prompt from the deterministic explanation packet."""
+    pid = patient_info["patient_id"]
+    fp = patient_info["final_prediction"]
+    model_pred_block = _model_prediction_block(patient_info)
+    outcome_phrase = _OUTCOME_PHRASE.get(fp, "prediction")
+    (first_header, first_factors), (second_header, second_factors) = _ordered_tables(patient_info)
 
-    Args:
-        patient_info: Dictionary from build_patient_explanation_data_full()
-
-    Returns:
-        String prompt for LLM
-    """
-    # Build DATA INPUTS section
-    data_inputs = f"""DATA INPUTS:
-Patient ID: {patient_info['patient_id']}
-Final Prediction: {patient_info['final_prediction_label']}"""
-
-    # Build STAGE 1 section (always shown)
-    stage1_contributing = _format_features_list(
-        patient_info['risk_increasing_features']
-    )
-    stage1_mitigating = _format_features_list(
-        patient_info['risk_decreasing_features']
+    grounding = (
+        f"{first_header}:\n{_bullet_lines(first_factors)}\n\n"
+        f"{second_header}:\n{_bullet_lines(second_factors)}"
     )
 
-    stage1_section = f"""---
-STAGE 1: FALL RISK ASSESSMENT
-These factors influenced whether the patient was predicted to have falls at all.
-
-Risk-Contributing Factors:
-{stage1_contributing}
-
-Risk-Mitigating Factors:
-{stage1_mitigating}"""
-
-    # Build STAGE 2 section (only if routed)
-    stage2_section = ""
-    if patient_info['has_severity_assessment']:
-        stage2_contributing = _format_features_list(
-            patient_info['severity_increasing_features']
-        )
-        stage2_mitigating = _format_features_list(
-            patient_info['severity_decreasing_features']
-        )
-
-        stage2_section = f"""
-
----
-STAGE 2: SEVERITY ASSESSMENT
-These factors influenced whether falls were predicted to be mild or moderate.
-
-Severity-Contributing Factors:
-{stage2_contributing}
-
-Severity-Mitigating Factors:
-{stage2_mitigating}"""
-
-    # Build INSTRUCTIONS section
-    stage2_instruction = """
-**Stage 2: Fall Severity Assessment**
-- Severity-Contributing Factors:
-  • [bullet for each factor]
-- Severity-Mitigating Factors:
-  • [bullet for each factor]
-""" if patient_info['has_severity_assessment'] else ""
-
-    overview_template = f"The model classified this patient as {patient_info['final_prediction_label']}."
-
-    instructions = f"""
----
-INSTRUCTIONS:
-You are a neurologist explaining a machine learning fall-risk prediction for a Parkinson’s disease patient.
+    return f"""You are a clinician explaining a machine-learning fall-risk prediction for a Parkinson's disease patient.
 
 IMPORTANT CONTEXT:
-- The machine learning model predicts fall risk for a patient with Parkinson's disease.
-- The LLM does not make the prediction; it only explains the model output.
-- Do not introduce new features or change contribution direction.
-- Do not infer additional clinical severity or causal relationships.
-- Be clinically neutral and avoid deterministic statements.
+- The machine-learning model predicts fall risk for a patient with Parkinson's disease.
+- You do NOT make the prediction; you only explain the model's output.
+- Use the provided factors, values, and scales exactly. Do NOT introduce new features, change any value, or move a factor between the two groups.
+- Do NOT infer additional clinical severity or causal relationships.
+- Be clinically neutral and avoid deterministic statements. Do NOT include probabilities, percentages, or model scores.
+- A factor's group shows the direction it pushed the model's prediction, not a clinical judgement of risk. Do NOT describe a factor as clinically "protective" or a "risk factor" unless its Interpretation / Scale text explicitly supports it.
+- When a factor value has an explicit interpretation in the Interpretation / Scale text, use that interpretation (e.g., absence of freezing of gait, normal postural stability, no motor complications).
+- Do not assign additional clinical meaning beyond what is explicitly provided in the Interpretation / Scale text.
+
+DATA (already computed by the model):
+
+Patient ID: {pid}
+Model Prediction:
+{model_pred_block}
+
+{grounding}
 
 TASK:
-Write a structured clinical explanation summarizing the model’s fall-risk prediction for this patient. 
-The explanation should:
-1. Use the provided overview sentence exactly as written.
-2. Lists ALL factors organized by section using bullet points.
-3. Preserve section order and factor order.
-3. End with one concise clinical summary.
+Produce the clinician document defined under OUTPUT FORMAT — the Model Prediction header, the two factor tables, and a model interpretation — using only the data above.
 
-BULLET FORMAT:
-- Format: [clinical interpretation] ([abbreviated feature name] = [value or label])
-- The clinical interpretation should be meaningful and understandable without abbreviations.
-- Do NOT repeat the numeric value in the interpretation; the value appears in parentheses.
-- Use short/abbreviated feature names in parentheses (e.g., "FOG", "MoCA", "H&Y stage").
-- For UPDRS scores: use "UPDRS-I total", "UPDRS-III total" for part totals; use item names like "Postural Stability", "Gait" for individual items (not "UPDRS-III").
-- Examples of GOOD bullets:
-  • Postural instability present at diagnosis (Postural instability = Yes)
-  • Rare freezing episodes (FOG = 1)
-  • Moderate gait impairment requiring walking aid (Gait = 3)
-  • Preserved cognition (MoCA = 30)
-  • No non-motor symptoms (UPDRS-I total = 0)
-  • Motor complications present (UPDRS-IV total = 14)
-- Examples of BAD bullets (do NOT do this):
-  • Yes (Postural instability symptom flag at diagnosis = 1)
-  • MDS-UPDRS Part IV total score (MDS-UPDRS Part IV total score = 14)
-  • Severe postural instability (UPDRS-III = 4)  // confusing: looks like total but is an item
-  • Depressive symptoms score 9 (GDS-15 = 9)  // value "9" is duplicated
+INSTRUCTIONS:
+- Build TWO tables exactly as grounded, in the given order and with the given headers. Keep each factor in its group and order; number rows 1..N within each table. For each row: Factor = the name before '|', Patient Value = the value after 'value:', Interpretation / Scale = the FULL text after 'scale/interpretation:'. Reproduce the Interpretation / Scale text EXACTLY and IN FULL — include every scale level and word; do NOT shorten it to the row's matching label, paraphrase it, or omit any part. Copy the Patient Value verbatim too. If a group has no factors, write "No qualifying factors." in place of that table.
+- MODEL INTERPRETATION: write 2-4 sentences explaining the model's {outcome_phrase}.
+  1. Begin with "Within this model, the {outcome_phrase} was primarily associated with …".
+  2. Summarize the top 3–5 most influential factors from the FIRST table (those supporting the prediction) in 1–2 broader categories when possible (e.g., gait and mobility, motor complications, non-motor symptoms, cognition, disease duration) rather than restating every factor individually.  
+  3. Then name the top 2-3 most influential factors from the SECOND table that supported the opposite direction, and note that they did not outweigh the factors supporting the {outcome_phrase}.
+  Every factor you mention must appear in a table. Use cautious language ("were associated with", "within this model"). Do NOT imply causality. Do NOT describe factors as clinically protective or risky unless the Interpretation / Scale text supports it. Do NOT introduce features not in the tables. Use "no" or "absence of" for a value of 0.
 
-VALUE INTERPRETATION:
-- Use scale labels when available (e.g., "Rare freezing" for FOG=1, not "Less freezing").
-- Do NOT assume mitigating factors have low values or contributing factors have high values.
-- For value 0, use "No/Absent/None" (e.g., "No non-motor symptoms" not "Lower non-motor burden").
-- Do NOT use comparative words ("Lower", "Less", "Higher") unless comparing to a reference.
+OUTPUT FORMAT (use this structure exactly):
 
-CLINICAL SUMMARY FORMAT:                                                                                                                                          
-- Summarize the top 2–3 contributing and mitigating factors in one sentence.
-- Use cautious language such as "were associated with" and "within this model."
-- Focus on overall clinical themes rather than listing all factors.
-- Do NOT repeat probabilities or section details.
-- Do NOT use comparative age terms such as "older" or "younger."
-- Use "no" for 0 values (e.g., "no daytime sleepiness").
+Clinical Fall Risk Summary for Patient ID: {pid}
 
-OVERVIEW SENTENCE:
-{overview_template}
+Model Prediction
+{model_pred_block}
 
-OUTPUT FORMAT:
+Factors are ordered from most to least influential based on their contribution to the model prediction.
 
-Clinical Fall Risk Summary for Patient ID: {patient_info['patient_id']}
+{first_header}
+| # | Factor | Patient Value | Interpretation / Scale |
+| --- | --- | --- | --- |
+[{first_header} rows, numbered 1..N]
 
-[Use the overview sentence exactly as provided]
+{second_header}
+| # | Factor | Patient Value | Interpretation / Scale |
+| --- | --- | --- | --- |
+[{second_header} rows, numbered 1..M]
 
-**Stage 1: Fall Risk Assessment**
-- Risk-Contributing Factors:
-  • [bullet for each factor]
-- Risk-Mitigating Factors:
-  • [bullet for each factor]
+Model Interpretation
+[3-4 sentence interpretation]
 
-{stage2_instruction}
-
-**Clinical Summary:** [one sentence]"""
-
-    return f"{data_inputs}\n\n{stage1_section}{stage2_section}\n{instructions}"
+Clinical Note
+- Model predictions are intended to support clinical review and should not replace clinical judgment.
+- The factors shown above identify the patient characteristics that most influenced the model prediction and provide insight into the model’s reasoning.
+- For definitions and interpretation of all variables used by the model, please refer to the Feature Reference Guide (feature_map.xlsx)."""
 
 
 def generate_explanation(patient_id, debug=None, provider=None, model_name=None, temperature=LLM_TEMPERATURE):
-    """Generate a clinical explanation for a patient's fall risk prediction.
+    """Generate a clinical explanation document for a patient's fall risk prediction.
 
-    This is the main entry point for generating explanations. It builds the prompt
-    from patient data, calls the LLM, and returns both the prompt and explanation.
+    Builds the prompt from the deterministic packet, calls the LLM, and returns the
+    rendered document along with the prompt and model identity.
 
     Args:
         patient_id: Patient PATNO identifier
@@ -341,7 +257,7 @@ def generate_explanation(patient_id, debug=None, provider=None, model_name=None,
         temperature: LLM temperature setting
 
     Returns:
-        Dictionary with 'prompt', 'explanation', and 'model' keys
+        Dictionary with 'provider', 'model', 'prompt', and 'explanation' keys
     """
     if debug is None:
         debug = DEBUG
