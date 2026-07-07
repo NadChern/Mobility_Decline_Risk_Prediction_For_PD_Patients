@@ -2,42 +2,40 @@
 
 Usage:
     # Verification run (1 run at temperature=0) to inspect CSV structure:
-    python -m explanation.llm_eval_runner
+    python -m explanation.evaluation.llm_eval_runner
 
     # Full evaluation run (5 runs × 2 temperatures):
-    python -m explanation.llm_eval_runner --runs 5 --temperature 0 0.3
+    python -m explanation.evaluation.llm_eval_runner --runs 5 --temperature 0 0.3
 """
 
 import argparse
 import numpy as np
 import pandas as pd
+from itertools import product
 from pathlib import Path
 
-from .contract import PATIENT_ID_COLUMN
-from .data_loader import y_pred_final, patient_ids
-from .explanation_builder import build_patient_explanation_data_full
-from .llm import generate_explanation
+from ..contract import PATIENT_ID_COLUMN
+from ..data_loader import y_pred_final, patient_ids
+from ..explanation_builder import build_patient_explanation_data_full
+from ..llm import generate_explanation, _displayable
 
-RESULTS_DIR = Path(__file__).resolve().parent.parent / "evaluation_results"
+RESULTS_DIR = Path(__file__).resolve().parent.parent.parent / "evaluation_results"
 GENERATIONS_PATH = RESULTS_DIR / "llm_generations.csv"
 
-_FEATURE_MAP_PATH = Path(__file__).resolve().parent / "feature_map.csv"
+_FEATURE_MAP_PATH = Path(__file__).resolve().parent.parent / "feature_map.csv"
 
 _EXPECTED_COLS = [
-    "patient_id", "category", "case", "model", "temperature", "run", "explanation",
-    "stage1_contributing", "stage1_contributing_shap",
-    "stage1_mitigating", "stage1_mitigating_shap",
-    "stage2_contributing", "stage2_contributing_shap",
-    "stage2_mitigating", "stage2_mitigating_shap",
+    "patient_id", "category", "stage", "model", "temperature", "run", "explanation",
+    "contributing", "contributing_shap",
+    "mitigating", "mitigating_shap",
 ]
 
 
 def load_generations(path=GENERATIONS_PATH):
-    """Load llm_generations.csv, preserving empty strings for Stage 2 Case 1 columns."""
+    """Load llm_generations.csv, preserving empty strings in feature columns."""
     return pd.read_csv(path, keep_default_na=False)
 
 _CATEGORY = {0: "no_falls", 1: "mild", 2: "moderate"}
-_CASE = {0: 1, 1: 2, 2: 2}
 
 _N_PER_CATEGORY = 10
 _PATIENT_SEED = 42
@@ -59,44 +57,53 @@ def select_patients():
 def _pipe_shap(features):
     """Return (names, shap_magnitudes) as pipe-separated strings.
 
-    Sign is encoded by which column the features appear in
-    (contributing vs mitigating), so we store |SHAP| here.
+    Names use each factor's short_name — the label the prompt shows the LLM and that
+    the LLM reproduces verbatim in its output tables — so evaluation compares
+    like-for-like with no name mapping needed. Sign is encoded by which column the
+    features appear in (contributing vs mitigating), so we store |SHAP| here.
     """
     if not features:
         return "", ""
-    names = "|".join(f["feature"] for f in features)
+    names = "|".join(f["short_name"] for f in features)
     shap_vals = "|".join(f"{abs(f['shap_contribution']):.6f}" for f in features)
     return names, shap_vals
 
 
 def _build_row(patient_id, patient_info, temperature, run, model, explanation):
+    """Build one generations row from the deterministic explanation packet.
+
+    Each explanation is single-stage: non-fallers are explained with the Stage 1 tables,
+    fallers with the Stage 2 (severity) tables. We store only the factors actually shown
+    to the LLM (displayable, for the relevant stage), split by SHAP direction:
+      - contributing = SHAP > 0 (toward fall for Stage 1, toward moderate for Stage 2)
+      - mitigating   = SHAP < 0 (toward no-fall for Stage 1, toward mild for Stage 2)
+    """
     final_class = patient_info["final_prediction"]
 
-    s1c, s1c_shap = _pipe_shap(patient_info["risk_increasing_features"])
-    s1m, s1m_shap = _pipe_shap(patient_info["risk_decreasing_features"])
-
     if patient_info["has_severity_assessment"]:
-        s2c, s2c_shap = _pipe_shap(patient_info["severity_increasing_features"])
-        s2m, s2m_shap = _pipe_shap(patient_info["severity_decreasing_features"])
+        stage = 2
+        contributing = _displayable(patient_info["severity_increasing_features"])
+        mitigating = _displayable(patient_info["severity_decreasing_features"])
     else:
-        s2c = s2c_shap = s2m = s2m_shap = ""
+        stage = 1
+        contributing = _displayable(patient_info["risk_increasing_features"])
+        mitigating = _displayable(patient_info["risk_decreasing_features"])
+
+    c, c_shap = _pipe_shap(contributing)
+    m, m_shap = _pipe_shap(mitigating)
 
     return {
-        "patient_id":               patient_id,
-        "category":                 _CATEGORY[final_class],
-        "case":                     _CASE[final_class],
-        "model":                    model,
-        "temperature":              temperature,
-        "run":                      run,
-        "explanation":              explanation,
-        "stage1_contributing":      s1c,
-        "stage1_contributing_shap": s1c_shap,
-        "stage1_mitigating":        s1m,
-        "stage1_mitigating_shap":   s1m_shap,
-        "stage2_contributing":      s2c,
-        "stage2_contributing_shap": s2c_shap,
-        "stage2_mitigating":        s2m,
-        "stage2_mitigating_shap":   s2m_shap,
+        "patient_id":        patient_id,
+        "category":          _CATEGORY[final_class],
+        "stage":             stage,
+        "model":             model,
+        "temperature":       temperature,
+        "run":               run,
+        "explanation":       explanation,
+        "contributing":      c,
+        "contributing_shap": c_shap,
+        "mitigating":        m,
+        "mitigating_shap":   m_shap,
     }
 
 
@@ -131,7 +138,7 @@ def generate_generations(temperatures, n_runs, output_path=GENERATIONS_PATH):
                 call_num += 1
                 tag = (
                     f"[{call_num}/{total}] "
-                    f"patient={patient_id} ({_CATEGORY[final_class]}, case={_CASE[final_class]}) "
+                    f"patient={patient_id} ({_CATEGORY[final_class]}) "
                     f"temp={temp} run={run}"
                 )
                 print(tag, end=" ... ", flush=True)
@@ -155,18 +162,9 @@ def generate_generations(temperatures, n_runs, output_path=GENERATIONS_PATH):
     return df
 
 
-def _print_sample(df):
-    """Print column list and a truncated sample row for inspection."""
-    print("\nColumns:")
-    for col in df.columns:
-        print(f"  {col}")
-
-    print("\nSample row (first patient):")
-    for col, val in df.iloc[0].items():
-        display = str(val)
-        if len(display) > 90:
-            display = display[:87] + "..."
-        print(f"  {col:<30} {display}")
+def _print_columns(df):
+    """Print the generated columns (compact) as a quick schema confirmation."""
+    print(f"\nColumns ({len(df.columns)}): {', '.join(df.columns)}")
 
 
 def validate_generations(path=GENERATIONS_PATH):
@@ -175,17 +173,32 @@ def validate_generations(path=GENERATIONS_PATH):
     Checks (all are errors → FAIL if triggered):
       1. Required columns present
       2. 30 patients, 10 per category
-      3. Case assignment (no_falls→1, others→2)
+      3. Stage matches category (no_falls→1, mild/moderate→2)
       4. Empty explanations
       5. Pipe count alignment (feature names ↔ SHAP values)
-      6. Stage 2 routing (empty for Case 1, non-empty for Case 2)
-      7. Feature names in feature_map.csv (prerequisite for faithfulness evaluation)
+      6. Each row has at least one stored factor
+      7. Feature labels in feature_map.csv short_name (prerequisite for faithfulness evaluation)
       8. Duplicate (patient, temperature, run, model) rows
+      9. Value domains: temperature ∈ {0, 0.3}, run contiguous from 1
+     10. Category labels ∈ {no_falls, mild, moderate}
+     11. Completeness: every (patient, temperature, run) present once per model (catches
+         rows silently dropped by failed LLM calls)
+     12. SHAP magnitude columns parse as non-negative floats
+     13. contributing ∩ mitigating disjoint (a feature can't be SHAP>0 and SHAP<0)
+     14. Each explanation references its own patient_id (row↔explanation alignment)
+
+    Warnings (reported but do NOT fail):
+      - Patient set differs from the seed-42 selection
 
     Prints a PASS/FAIL report and returns True if no errors.
     """
     df = load_generations(path)
     errors = []
+    warnings = []
+
+    # Domains observed in the data — reused by the value-domain and completeness checks.
+    temps_present = sorted(float(t) for t in df["temperature"].unique())
+    runs_present = sorted(int(r) for r in df["run"].unique())
 
     # 1. Required columns
     missing_cols = [c for c in _EXPECTED_COLS if c not in df.columns]
@@ -198,13 +211,14 @@ def validate_generations(path=GENERATIONS_PATH):
         if n != expected_n:
             errors.append(f"Expected {expected_n} {cat} patients, got {n}")
 
-    # 3. Case assignment
-    wrong = df[
-        ((df["category"] == "no_falls") & (df["case"] != 1)) |
-        ((df["category"] != "no_falls") & (df["case"] != 2))
-    ]
-    if len(wrong):
-        errors.append(f"{len(wrong)} rows have wrong case assignment")
+    # 3. Stage matches category (no_falls→Stage 1; mild/moderate→Stage 2)
+    if "stage" in df.columns:
+        wrong = df[
+            ((df["category"] == "no_falls") & (df["stage"] != 1)) |
+            ((df["category"] != "no_falls") & (df["stage"] != 2))
+        ]
+        if len(wrong):
+            errors.append(f"{len(wrong)} rows have stage not matching category")
 
     # 4. Empty explanations
     empty_exp = (df["explanation"] == "").sum()
@@ -213,10 +227,8 @@ def validate_generations(path=GENERATIONS_PATH):
 
     # 5. Pipe count alignment between feature name and SHAP value columns
     pipe_pairs = [
-        ("stage1_contributing", "stage1_contributing_shap"),
-        ("stage1_mitigating",   "stage1_mitigating_shap"),
-        ("stage2_contributing", "stage2_contributing_shap"),
-        ("stage2_mitigating",   "stage2_mitigating_shap"),
+        ("contributing", "contributing_shap"),
+        ("mitigating",   "mitigating_shap"),
     ]
     for nc, sc in pipe_pairs:
         if nc not in df.columns or sc not in df.columns:
@@ -230,20 +242,19 @@ def validate_generations(path=GENERATIONS_PATH):
         if bad:
             errors.append(f"Pipe count mismatch {nc} vs {sc}: {bad} rows")
 
-    # 6. Stage 2 routing: empty for Case 1, non-empty for Case 2
-    case1 = df[df["case"] == 1]
-    case2 = df[df["case"] == 2]
-    if not (case1["stage2_contributing"] == "").all():
-        errors.append("Case 1 rows have non-empty stage2_contributing")
-    if len(case2) and not (case2["stage2_contributing"] != "").all():
-        errors.append("Some Case 2 rows have empty stage2_contributing")
+    # 6. Each row has at least one stored factor (contributing or mitigating)
+    if {"contributing", "mitigating"}.issubset(df.columns):
+        both_empty = df[(df["contributing"] == "") & (df["mitigating"] == "")]
+        if len(both_empty):
+            errors.append(f"{len(both_empty)} rows have no stored factors (both columns empty)")
 
-    # 7. Feature names in feature_map.csv
-    # Guards faithfulness/feature-consistency evaluation: unknown names can't be
-    # matched to LLM-mentioned variants and would be misclassified as ghost features.
-    known = set(pd.read_csv(_FEATURE_MAP_PATH)["feature_name"])
+    # 7. Feature labels in feature_map.csv short_name column.
+    # The canonical evaluation vocabulary is short_name — the same label the prompt shows
+    # and the LLM reproduces in its tables. Guards faithfulness/feature-consistency:
+    # an unknown label can't be matched and would be misclassified as a ghost feature.
+    known = set(pd.read_csv(_FEATURE_MAP_PATH)["short_name"])
     unknown = set()
-    for col in ("stage1_contributing", "stage2_contributing"):
+    for col in ("contributing", "mitigating"):
         if col not in df.columns:
             continue
         for val in df[col]:
@@ -252,12 +263,88 @@ def validate_generations(path=GENERATIONS_PATH):
                     if name and name not in known:
                         unknown.add(name)
     if unknown:
-        errors.append(f"Feature names not in feature_map.csv: {sorted(unknown)[:5]}")
+        errors.append(f"Feature labels not in feature_map.csv short_name: {sorted(unknown)[:5]}")
 
     # 8. Duplicate (patient, temperature, run, model) rows
     dupes = df.duplicated(["patient_id", "temperature", "run", "model"]).sum()
     if dupes:
         errors.append(f"{dupes} duplicate (patient, temperature, run, model) rows")
+
+    # 9. Value domains
+    bad_temps = [t for t in temps_present if not (np.isclose(t, 0.0) or np.isclose(t, 0.3))]
+    if bad_temps:
+        errors.append(f"Unexpected temperature values: {bad_temps}")
+    if runs_present and runs_present != list(range(1, len(runs_present) + 1)):
+        errors.append(f"Run values not contiguous from 1: {runs_present}")
+
+    # 10. Category labels valid
+    bad_cats = set(df["category"].unique()) - {"no_falls", "mild", "moderate"}
+    if bad_cats:
+        errors.append(f"Unexpected category labels: {sorted(bad_cats)}")
+
+    # 11. Completeness — every (patient, temperature, run) combo present once per model.
+    # Catches rows silently dropped by failed LLM calls (the duplicate check only finds extras).
+    for model, mdf in df.groupby("model"):
+        pids = sorted(int(p) for p in mdf["patient_id"].unique())
+        have = {
+            (int(p), float(t), int(r))
+            for p, t, r in mdf[["patient_id", "temperature", "run"]].itertuples(index=False, name=None)
+        }
+        missing = [c for c in product(pids, temps_present, runs_present) if c not in have]
+        if missing:
+            expected_n = len(pids) * len(temps_present) * len(runs_present)
+            errors.append(
+                f"[{model}] {len(missing)} missing (patient,temp,run) rows "
+                f"(expected {expected_n}, have {len(mdf)}); e.g. {missing[:3]}"
+            )
+
+    # 12. SHAP magnitude columns parse as non-negative floats
+    for sc in ("contributing_shap", "mitigating_shap"):
+        if sc not in df.columns:
+            continue
+        bad = 0
+        for val in df[sc]:
+            if val == "":
+                continue
+            for tok in str(val).split("|"):
+                try:
+                    if float(tok) < 0:
+                        bad += 1
+                except ValueError:
+                    bad += 1
+        if bad:
+            errors.append(f"{sc}: {bad} non-numeric or negative SHAP value(s)")
+
+    # 13. contributing ∩ mitigating disjoint
+    if {"contributing", "mitigating"}.issubset(df.columns):
+        def _overlap(row):
+            c = {x for x in str(row["contributing"]).split("|") if x}
+            m = {x for x in str(row["mitigating"]).split("|") if x}
+            return bool(c & m)
+        n_overlap = df.apply(_overlap, axis=1).sum()
+        if n_overlap:
+            errors.append(f"{n_overlap} rows have a feature in both contributing and mitigating")
+
+    # 14. Each explanation references its own patient_id (row↔explanation alignment)
+    misref = sum(
+        1 for _, row in df.iterrows()
+        if str(row["patient_id"]) not in str(row["explanation"])
+    )
+    if misref:
+        errors.append(f"{misref} explanations do not mention their own patient_id")
+
+    # Warning: patient set matches the seed-42 selection (identity, not just counts)
+    try:
+        expected_ids = {int(patient_ids.iloc[i][PATIENT_ID_COLUMN]) for i in select_patients()}
+        actual_ids = {int(p) for p in df["patient_id"].unique()}
+        if actual_ids != expected_ids:
+            warnings.append(
+                "Patient set differs from the seed-42 selection "
+                f"(missing e.g. {sorted(expected_ids - actual_ids)[:3]}, "
+                f"extra e.g. {sorted(actual_ids - expected_ids)[:3]})"
+            )
+    except Exception as exc:
+        warnings.append(f"Could not verify patient identity against seed-42 selection: {exc}")
 
     # Report
     print(f"\nValidating: {path}")
@@ -266,9 +353,11 @@ def validate_generations(path=GENERATIONS_PATH):
         f"Models: {list(df['model'].unique())}"
     )
     print(
-        f"Temperatures: {sorted(df['temperature'].unique())}  |  "
-        f"Runs: {sorted(df['run'].unique())}"
+        f"Temperatures: {sorted(float(t) for t in df['temperature'].unique())}  |  "
+        f"Runs: {sorted(int(r) for r in df['run'].unique())}"
     )
+    for w in warnings:
+        print(f"\n⚠ WARNING: {w}")
     if not errors:
         print("\n✓ PASS — CSV is ready for full evaluation run")
     else:
@@ -311,7 +400,10 @@ def main():
         n_runs=args.runs,
         output_path=Path(args.output),
     )
-    _print_sample(df)
+    _print_columns(df)
+
+    # Always validate what we just wrote, so PASS/FAIL is shown without a separate command.
+    validate_generations(Path(args.output))
 
 
 if __name__ == "__main__":
