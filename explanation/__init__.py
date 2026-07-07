@@ -2,7 +2,7 @@
 
 This package provides explanation capabilities for the full two-stage fall prediction pipeline:
 - Stage 1: No falls (0) vs Any falls (1) - Random Forest classifier
-- Stage 2: Mild falls (1) vs Moderate falls (2) - XGBoost classifier - only for patients
+- Stage 2: Rare Fall (1) vs Recurrent Fall (2) - XGBoost classifier - only for patients
            predicted as "any fall" by Stage 1
 
 The explanation layer loads precomputed SHAP values and predictions from both stages

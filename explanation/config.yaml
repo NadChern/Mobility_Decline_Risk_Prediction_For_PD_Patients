@@ -12,14 +12,14 @@ shap:
 # LLM Settings (for generating natural language explanations)
 llm:
   # Provider: "openrouter" or "google"
-  provider: "google"
+  provider: "openrouter"
 
   # Temperature for LLM generation (0 = deterministic)
   temperature: 0
 
   # OpenRouter settings (requires OPENROUTER_API_KEY in .env)
   openrouter:
-    model: "nvidia/nemotron-3-super-120b-a12b:free"
+    model: "deepseek/deepseek-v4-flash::alibaba"
 
   # Google AI settings (requires GOOGLE_API_KEY in .env)
   google:
