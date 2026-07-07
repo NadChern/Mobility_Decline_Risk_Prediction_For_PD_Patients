@@ -42,7 +42,7 @@ def create_validation_dataset(n_per_category=10, output_path=None, seed=42, max_
     random.seed(seed)
 
     # Category mapping
-    categories = {0: "No falls", 1: "Mild falls", 2: "Moderate falls"}
+    categories = {0: "No falls", 1: "Rare Fall", 2: "Recurrent Fall"}
 
     # Check for partial results to resume
     processed_ids = set()

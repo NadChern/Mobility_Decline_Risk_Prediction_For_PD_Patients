@@ -151,7 +151,7 @@ def test_generate_structure():
     if not _llm_enabled():
         _skip("set RUN_LLM_TESTS=1 (or pass --llm) with an API key to run live LLM tests")
     from explanation.llm import generate_explanation
-    labels = {NO_FALL: "Fall Classification: No Fall", MILD: "Mild Falls", MODERATE: "Moderate Falls"}
+    labels = {NO_FALL: "Fall Classification: No Fall", MILD: "Rare Fall", MODERATE: "Recurrent Fall"}
     for pid, (h1, h2, _sign) in _CASES.items():
         doc = generate_explanation(pid, debug=False, temperature=0)["explanation"]
         assert f"Patient ID: {pid}" in doc

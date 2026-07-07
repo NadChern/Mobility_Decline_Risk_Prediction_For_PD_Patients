@@ -241,8 +241,8 @@ def export_explanation_artifacts(
 
     final_counts = {
         "no_fall": int((y_pred_final == 0).sum()),
-        "mild": int((y_pred_final == 1).sum()),
-        "moderate": int((y_pred_final == 2).sum()),
+        "rare_fall": int((y_pred_final == 1).sum()),
+        "recurrent_fall": int((y_pred_final == 2).sum()),
     }
 
     # --- Write provenance manifest (write-only; consumer never reads it) ---

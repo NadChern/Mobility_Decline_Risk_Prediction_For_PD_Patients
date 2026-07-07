@@ -10,8 +10,8 @@ facts (the evaluation checks this).
 
 Direction is expressed as which way a factor pushed the model's prediction:
   - Stage 1 (No Fall): "Toward No Fall" (SHAP < 0) vs "Toward Fall" (SHAP > 0)
-  - Stage 2 (severity): "Toward Lower Severity (Mild)" (SHAP < 0) vs
-                        "Toward Higher Severity (Moderate)" (SHAP > 0)
+  - Stage 2 (severity): "Toward Lower Severity (Rare Fall)" (SHAP < 0) vs
+                        "Toward Higher Severity (Recurrent Fall)" (SHAP > 0)
 The table supporting the actual prediction is shown first (drivers first).
 """
 from .data_loader import (
@@ -113,16 +113,16 @@ def build_langchain_llm(provider=None, model_name=None, temperature=LLM_TEMPERAT
         )
 
 
-_SEVERITY_LABEL = {1: "Mild Falls", 2: "Moderate Falls"}
+_SEVERITY_LABEL = {1: "Rare Fall", 2: "Recurrent Fall"}
 _OUTCOME_PHRASE = {
     0: "No Fall classification",
-    1: "Mild Fall classification",
-    2: "Moderate Fall classification",
+    1: "Rare Fall classification",
+    2: "Recurrent Fall classification",
 }
 
 # Stage-2 table headers (fixed wording).
-_HIGHER = "Factors Pushing the Prediction Toward Higher Severity (Moderate)"
-_LOWER = "Factors Pushing the Prediction Toward Lower Severity (Mild)"
+_HIGHER = "Factors Pushing the Prediction Toward Higher Severity (Recurrent Fall)"
+_LOWER = "Factors Pushing the Prediction Toward Lower Severity (Rare Fall)"
 # Stage-1 table headers.
 _TOWARD_FALL = "Factors Pushing the Prediction Toward Fall"
 _TOWARD_NOFALL = "Factors Pushing the Prediction Toward No Fall"
@@ -141,8 +141,8 @@ def _ordered_tables(patient_info):
     """
     fp = patient_info["final_prediction"]
     if patient_info["has_severity_assessment"]:
-        higher = (_HIGHER, patient_info["severity_increasing_features"])   # toward Moderate
-        lower = (_LOWER, patient_info["severity_decreasing_features"])     # toward Mild
+        higher = (_HIGHER, patient_info["severity_increasing_features"])   # toward Recurrent Fall
+        lower = (_LOWER, patient_info["severity_decreasing_features"])     # toward Rare Fall
         tables = [higher, lower] if fp == 2 else [lower, higher]
     else:
         toward_fall = (_TOWARD_FALL, patient_info["risk_increasing_features"])

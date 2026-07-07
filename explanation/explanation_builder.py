@@ -60,8 +60,8 @@ def get_final_prediction_label(final_class):
     """
     labels = {
         0: "No falls",
-        1: "Mild falls",
-        2: "Moderate falls",
+        1: "Rare Fall",
+        2: "Recurrent Fall",
     }
     return labels.get(int(final_class), f"Unknown class {final_class}")
 
