@@ -1,11 +1,15 @@
 # Explanation Pipeline
 
+> This README documents only the `explanation/` package — explanation generation and its
+> evaluation pipeline. It does not cover the modeling notebooks in `Revised_Modelling/` or the
+> rest of the repository.
+
 ## Summary
 
-This package generates patient-specific explanations for the current two-stage fall prediction workflow used in this repository.
+This package generates patient-specific explanations for the current two-stage fall prediction workflow used in this repository, combining SHAP feature attribution with LLM-based natural-language generation. Rather than reporting only the predicted fall category, it identifies the patient characteristics that most influenced the model's decision and presents them in a structured, clinically interpretable format. The mechanics (attribution method, coverage-based feature selection, determinism/additivity checks) are documented in detail in [SHAP Calculation, Feature Selection & Sanity Checks](#shap-calculation-feature-selection--sanity-checks) below.
 
 - **Stage 1** explains the probability of **any fall** (RandomForest, TreeSHAP).
-- **Stage 2** explains **mild vs moderate fall severity** for patients routed forward by Stage 1 (XGBoost, TreeSHAP).
+- **Stage 2** explains **Rare Fall vs Recurrent Fall severity** for patients routed forward by Stage 1 (XGBoost, TreeSHAP).
 - Feature selection for explanations uses the SHAP coverage threshold defined in [`config.yaml`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/config.yaml).
 - The main runtime output is a console clinical summary. When `debug: true`, the full LLM prompt is also printed.
 
@@ -13,7 +17,7 @@ This package generates patient-specific explanations for the current two-stage f
 
 The package is split into a **producer** ([`export.py`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/export.py), run from the modelling notebook) and a **consumer** (everything that reads `explanation_artifacts/` at runtime), with a small shared **contract** ([`contract.py`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/contract.py)) defining artifact filenames and the `PATNO` key.
 
-We chose this because the model changed once (Stage 2 went LinearSVC → XGBoost) and will likely change again. The design keeps that cheap:
+This producer-consumer split gives four concrete benefits: it separates responsibilities cleanly, improves maintainability as the underlying model evolves, keeps explanations reproducible from a fixed set of artifacts, and supports robust validation before anything reaches the LLM step:
 
 - **Model-agnostic SHAP** — `compute_shap()` leans on `shap.Explainer`'s dispatcher and normalises any tree/linear output to a 2-D positive-class array. Swapping the underlying model needs **no explanation-code edits**.
 - **Consumer decoupled from the model** — the runtime only depends on the 8-file artifact contract, not on which algorithm produced it. So a new model is just a re-export.
@@ -27,7 +31,7 @@ The explanation layer loads precomputed model artifacts from `explanation_artifa
 Current behavior:
 
 - Stage 1 explains why the model predicted **no falls** or **any falls**.
-- Stage 2 explains why routed patients were classified as **mild falls** or **moderate falls**.
+- Stage 2 explains why routed patients were classified as **Rare Fall** or **Recurrent Fall**.
 - The package expects the **full two-stage artifact set** to be present.
 - The default CLI flow auto-selects the first patient in the saved test set (override in [`__main__.py`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/__main__.py)).
 
@@ -37,20 +41,21 @@ The LLM renders one clinician document from the deterministic SHAP packet (it ma
 alter the facts):
 
 - a **Model Prediction** header (Fall Classification, plus Severity if routed);
-- **two factor tables** — *Factors Pushing the Prediction Toward …* the predicted outcome
+- **two factor tables** — _Factors Pushing the Prediction Toward …_ the predicted outcome
   (shown first, the drivers) and the opposite direction — each `# | Factor | Patient Value |
-  Interpretation / Scale`, ordered by `|SHAP|`, with missing / "unable to rate" factors omitted;
+Interpretation / Scale`, ordered by `|SHAP|`, with missing / "unable to rate" factors omitted;
 - a short **Model Interpretation** (names the main drivers and the opposing factors that did
   not outweigh them); and
 - a fixed **Clinical Note**.
 
-Export to Markdown / HTML / PDF via [`render.py`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/render.py) (see *Export the output* below).
+Export to Markdown / HTML / PDF via [`render.py`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/render.py) (see _Export the output_ below).
 
 ## Package Structure
 
 The files most relevant to users are:
 
 ```text
+README.md              # this file (project root)
 explanation/
   __init__.py
   __main__.py
@@ -61,10 +66,15 @@ explanation/
   export.py
   feature_map.csv
   llm.py
-  README.md
   render.py
   shap_utils.py
   validate.py
+  evaluation/
+    llm_eval_runner.py
+    llm_stability.py
+    llm_structure.py
+    llm_faithfulness.py
+    additivity_check.py
 ```
 
 What they are used for:
@@ -79,6 +89,7 @@ What they are used for:
 - `validate.py`: generates a validation spreadsheet with sampled patients and LLM explanations.
 - `config.yaml`: controls debug mode, SHAP coverage threshold, provider, model, and temperature.
 - `feature_map.csv`: maps each model feature to a clinician-facing `short_name`, an instrument-named `description`, and a standardised value scale (curated, version-controlled).
+- `evaluation/`: the explanation-quality evaluation pipeline (stability, structure, faithfulness, additivity) — see [Evaluation](#evaluation) below.
 
 ## Required Runtime Artifacts
 
@@ -126,10 +137,11 @@ Environment variables are loaded from the project root `.env` file.
 
 At the time of writing, the default configuration is:
 
-- provider: `google`
-- model: `gemini-3.1-flash-lite`
+- provider: `openrouter`
+- model: `deepseek/deepseek-v4-flash::alibaba`
 
-OpenRouter remains supported through the same interface in `llm.py`.
+Google (`gemini-3.1-flash-lite`) remains supported through the same interface in `llm.py`; switch
+`llm.provider` in `config.yaml` to use it.
 
 ## How To Run
 
@@ -175,21 +187,22 @@ ls explanation_artifacts          # 8 artifacts + manifest.json
 ```
 
 > Notes:
+>
 > - `explanation_artifacts/` is git-ignored, so a fresh clone must run this step to recreate the artifacts.
 > - XGBoost on macOS needs the OpenMP runtime: `brew install libomp` if `import xgboost` fails.
 
 ### 3. Add the required API key to `.env`
 
-For the current default provider:
-
-```env
-GOOGLE_API_KEY=your_google_api_key_here
-```
-
-If you switch `llm.provider` to OpenRouter in `config.yaml`, use:
+For the current default provider (OpenRouter):
 
 ```env
 OPENROUTER_API_KEY=your_openrouter_api_key_here
+```
+
+If you switch `llm.provider` to Google in `config.yaml`, use:
+
+```env
+GOOGLE_API_KEY=your_google_api_key_here
 ```
 
 ### 4. Install missing dependencies if needed
@@ -252,27 +265,6 @@ Notes:
 - The `.md` / `.html` files render as a formatted table in any markdown viewer or browser
   (in VS Code, open a `.md` and press `Cmd+Shift+V` for the preview).
 
-## Validation Utility
-
-[`validate.py`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/validate.py) creates a spreadsheet for manual review of LLM explanations across sampled patients from each prediction class.
-
-Run it from the project root with:
-
-```bash
-python -m explanation.validate
-```
-
-What it does:
-
-- samples patients from the final prediction categories
-- calls the explanation pipeline for each selected patient
-- writes `validation_results.xlsx` in the project root
-- writes a resumable partial file during execution if needed
-
-Output location:
-
-- validation spreadsheet: `validation_results.xlsx` in the project root
-
 ## SHAP Calculation, Feature Selection & Sanity Checks
 
 This section documents how the per-patient feature attributions are computed, how the
@@ -287,10 +279,10 @@ Both stages use **TreeSHAP** via `shap.Explainer(model, background)`
 `TreeExplainer`, confirmed in `manifest.json` (`stage1_shap_explainer` /
 `stage2_shap_explainer` = `TreeExplainer`).
 
-| | Model | Explainer | SHAP output | Reported space |
-|---|---|---|---|---|
-| **Stage 1** | RandomForest | TreeSHAP | `(N, F, 2)` → class-1 slice `[:, :, 1]` | probability of *any fall* |
-| **Stage 2** | XGBoost | TreeSHAP | `(M, F)` for the positive class | log-odds margin toward *moderate* |
+|             | Model        | Explainer | SHAP output                             | Reported space                          |
+| ----------- | ------------ | --------- | --------------------------------------- | --------------------------------------- |
+| **Stage 1** | RandomForest | TreeSHAP  | `(N, F, 2)` → class-1 slice `[:, :, 1]` | probability of _any fall_               |
+| **Stage 2** | XGBoost      | TreeSHAP  | `(M, F)` for the positive class         | log-odds margin toward _Recurrent Fall_ |
 
 Key properties:
 
@@ -298,9 +290,9 @@ Key properties:
   (no Monte-Carlo sampling), using a **fixed training-set background** (`X_train` for Stage 1,
   the true-faller training rows `X_train_12` for Stage 2). With fixed seeds across the split
   and both models, the attributions are reproducible run-to-run — see the determinism check below.
-- **Sign convention.** Positive SHAP pushes the prediction *toward the positive class*
-  (any-fall for Stage 1, moderate for Stage 2); negative SHAP pushes away. The explanation
-  presents these as two tables — *Factors Pushing the Prediction Toward …* the predicted
+- **Sign convention.** Positive SHAP pushes the prediction _toward the positive class_
+  (any-fall for Stage 1, Recurrent Fall for Stage 2); negative SHAP pushes away. The explanation
+  presents these as two tables — _Factors Pushing the Prediction Toward …_ the predicted
   outcome (drivers) vs. the opposite direction — rather than as clinical risk/protective labels.
 - **Model-agnostic normalisation.** `compute_shap()` collapses whichever shape the explainer
   returns (`(N,F,2)`, `(M,F)`, or a legacy `list`) into a 2-D positive-class array, and rejects
@@ -325,15 +317,15 @@ Why this is preferable to a fixed "top-5":
 
 - **It is adaptive to the actual decision.** When a prediction is driven by 2–3 dominant
   features, coverage reports just those; when the contribution is diffuse across many small
-  features, it reports more. A fixed top-5 mis-sizes both cases: it *pads* the concentrated
-  case with near-zero features, and it *under-explains* the diffuse case (a top-5 might cover
+  features, it reports more. A fixed top-5 mis-sizes both cases: it _pads_ the concentrated
+  case with near-zero features, and it _under-explains_ the diffuse case (a top-5 might cover
   only ~40% of the signal, silently omitting most of the reasoning).
 - **It carries a guarantee.** "These factors explain ≥ 90% of the model's push in each
   direction" is a defensible statement; "top 5" carries no guarantee about how much of the
   decision is actually captured.
 - **It is faithful to magnitude, not count.** Ranking and the cut-off use `|SHAP|`, so the
   threshold is comparable across patients and across model versions (even though raw SHAP
-  *units* differ between a linear and a tree model).
+  _units_ differ between a linear and a tree model).
 
 The threshold is a single config value, so it can be tightened (e.g. `0.95`) or loosened
 without code changes.
@@ -377,15 +369,15 @@ deterministic and that what is on disk is exactly what the explainer produced.
 
 ### 5. Additivity sanity check (correctness of the values)
 
-Determinism proves *stability*; additivity proves the values are *correct* Shapley
+Determinism proves _stability_; additivity proves the values are _correct_ Shapley
 attributions. TreeSHAP satisfies the **local-accuracy / additivity** property:
 `base_value + Σ SHAP = model output` for each patient. We verified this independently against
 the saved artifacts:
 
-| Stage | Reconstruction tested | Max error |
-|---|---|---|
+| Stage                  | Reconstruction tested                                  | Max error   |
+| ---------------------- | ------------------------------------------------------ | ----------- |
 | Stage 1 (RandomForest) | `base + Σ SHAP` vs `predict_proba` (probability space) | ≈ `1.0e-02` |
-| Stage 2 (XGBoost) | `base + Σ SHAP` vs raw margin (log-odds space) | ≈ `1.1e-06` |
+| Stage 2 (XGBoost)      | `base + Σ SHAP` vs raw margin (log-odds space)         | ≈ `1.1e-06` |
 
 Stage 2 reconciles to floating-point precision. The small Stage 1 residual comes from SHAP's
 `Independent` background masker sub-sampling the background (default 100 rows) when estimating
@@ -393,58 +385,53 @@ the expected value — it is a property of the SHAP library's default, **not** o
 (the old LinearSVC pipeline used the identical `shap.Explainer(model, X_train)` call), and it
 does not affect feature ranking or selection, which depend only on `|SHAP|`.
 
-### 6. Reproduce the checks yourself
-
-From the project root (`.venv` active), this recomputes both stages, compares to the saved
-files, and runs the additivity check:
-
-```bash
-python - <<'PY'
-import warnings; warnings.filterwarnings("ignore")
-import numpy as np, pandas as pd, shap
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from xgboost import XGBClassifier
-from explanation.export import compute_shap
-
-data = pd.read_csv("Revised_Modelling/Modelling.csv")
-# use the exact column order the artifacts were built with (not feature_map order —
-# column order changes index-based feature subsampling and thus the trained trees)
-cols = list(pd.read_csv("explanation_artifacts/X_test.csv").columns)
-X, Y, pid = data[cols], data["Falls not rel to freezing past 36 months"], data["PATNO"]
-Xtr, Xte, ytr, yte, _, _ = train_test_split(X, Y, pid, test_size=0.3, random_state=42, stratify=Y)
-ytr1 = (ytr != 0).astype(int)
-f = ytr.isin([1, 2]); Xtr12, ytr2 = Xtr.loc[f], (ytr.loc[f] == 2).astype(int)
-s1 = RandomForestClassifier(max_depth=8, max_features="sqrt", min_samples_leaf=1,
-        min_samples_split=5, n_estimators=100, class_weight={0:1,1:2}, random_state=42).fit(Xtr, ytr1)
-s2 = XGBClassifier(colsample_bytree=1.0, learning_rate=0.05, max_depth=3, n_estimators=100,
-        subsample=1.0, eval_metric="logloss", random_state=42, verbosity=0).fit(Xtr12, ytr2)
-Xte = Xte[cols]; routed = s1.predict(Xte) == 1; Xr = Xte[routed]
-
-sv1, sv2 = np.load("explanation_artifacts/shap_values_stage1.npy"), np.load("explanation_artifacts/shap_values_stage2.npy")
-print("Stage1 saved==recomputed:", np.allclose(sv1, compute_shap(s1, Xtr, Xte)))
-print("Stage2 saved==recomputed:", np.allclose(sv2, compute_shap(s2, Xtr12, Xr)))
-e1 = shap.Explainer(s1, Xtr)(Xte)
-print("Stage1 additivity max err:", float(np.max(np.abs(e1.base_values[:,1]+e1.values[:,:,1].sum(1) - s1.predict_proba(Xte)[:,1]))))
-e2 = shap.Explainer(s2, Xtr12)(Xr)
-print("Stage2 additivity max err:", float(np.max(np.abs(e2.base_values+e2.values.sum(1) - s2.predict(Xr, output_margin=True)))))
-PY
-```
-
 ## Output Locations
 
 To avoid confusion, the main output locations are:
 
 - `explanation_artifacts/`: runtime model artifacts consumed by the explanation package
-- project root `validation_results.xlsx`: spreadsheet generated by `python -m explanation.validate`
+- `evaluation_results/`: per-patient and per-category CSVs written by the evaluation pipeline (git-ignored) — see [Evaluation](#evaluation) below
 
 Per-patient documents can be exported to Markdown / HTML / PDF with `render.py` (see [Export the output to Markdown / HTML / PDF](#6-export-the-output-to-markdown--html--pdf) above). The package does not auto-write them to a fixed location — you choose the output path.
+
+## Evaluation
+
+`explanation/evaluation/` assesses generated explanations along three dimensions, plus an
+independent SHAP sanity check. Full methodology (sampling design, metric definitions) is in
+`llm_eval_plan.md`; results already produced live under `evaluation_results/` (git-ignored).
+
+- **Stability** ([`llm_stability.py`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/evaluation/llm_stability.py)) — do repeated generations for the same patient agree? Exact-match at temperature 0; semantic similarity + factor-set (Jaccard) consistency at temperature 0.3.
+- **Structure** ([`llm_structure.py`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/evaluation/llm_structure.py)) — does each report follow the required template: sections present, correct stage/routing layout, well-formed tables, drivers-table-first ordering, no forbidden probability/percentage language?
+- **Faithfulness** ([`llm_faithfulness.py`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/evaluation/llm_faithfulness.py)) — does the report match the deterministic SHAP evidence it was given: same factors, correct direction, correct values/scale text, correct predicted outcome; does the free-text interpretation avoid naming factors it wasn't given?
+- **Additivity** ([`additivity_check.py`](/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/explanation/evaluation/additivity_check.py)) — independently re-verifies `base value + Σ SHAP = model output` against the exported artifacts; a numerical check on the attributions themselves, not on the LLM.
+
+### Running the evaluation pipeline
+
+```bash
+# 1. Generate the evaluation dataset (5 runs x temperatures 0 and 0.3 -> evaluation_results/llm_generations.csv)
+python -m explanation.evaluation.llm_eval_runner --runs 5 --temperature 0 0.3
+
+# 2. Structure and faithfulness are deterministic, rule-based checks - no extra setup needed
+python -m explanation.evaluation.llm_structure
+python -m explanation.evaluation.llm_faithfulness
+
+# 3. Stability needs local embeddings via Ollama - pull the model once, then run
+ollama pull qwen3-embedding:0.6b
+python -m explanation.evaluation.llm_stability
+
+# 4. Independent SHAP sanity check (no dependency on step 1)
+python -m explanation.evaluation.additivity_check
+```
+
+Each command writes a per-patient CSV and a per-category summary CSV to `evaluation_results/`.
 
 ## Common Failure Modes
 
 - Missing API key for the selected provider in `.env`
 - Missing Stage 2 artifacts in `explanation_artifacts/`
 - Row-count mismatch across saved artifact files
+- Stability step (`llm_stability.py`) requires a running Ollama server with `qwen3-embedding:0.6b` pulled — `python -m explanation.evaluation.llm_stability` fails otherwise
+- Structure/faithfulness/stability all read `evaluation_results/llm_generations.csv` — run `llm_eval_runner` first
 - Missing provider-specific dependency such as `langchain-google-genai` or `langchain-openrouter`
 
 If you hit one of these errors, first verify `config.yaml`, `.env`, and the contents of `explanation_artifacts/`.
