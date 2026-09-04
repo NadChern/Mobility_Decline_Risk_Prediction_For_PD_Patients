@@ -1,0 +1,61 @@
+patient_id,method,original_status,assessment,old_flag_count,new_flag_count,old_flags,new_findings,human_review
+3066,domain_template,complete,pass,0,0,[],[],pending
+3066,taxonomy_conditioned_llm,complete,pass,0,0,[],[],pending
+3223,domain_template,complete,pass,0,0,[],[],pending
+3223,taxonomy_conditioned_llm,contract_failed,pass,1,0,"[""missing_or_inexact_group=opposes_prediction:gait_mobility""]",[],pending
+3429,domain_template,complete,pass,0,0,[],[],pending
+3429,taxonomy_conditioned_llm,contract_failed,pass,3,0,"[""missing_singleton=Gait"", ""missing_singleton=Age"", ""missing_contrastive_outweigh_statement""]",[],pending
+3625,domain_template,complete,pass,0,0,[],[],pending
+3625,taxonomy_conditioned_llm,contract_failed,pass,4,0,"[""missing_or_inexact_group=supports_prediction:gait_mobility"", ""missing_singleton=Age"", ""missing_singleton=Urinary Problems"", ""missing_singleton=Rigidity at Dx""]",[],pending
+3832,domain_template,complete,pass,0,0,[],[],pending
+3832,taxonomy_conditioned_llm,contract_failed,pass,3,0,"[""missing_or_inexact_group=supports_prediction:gait_mobility"", ""missing_or_inexact_group=opposes_prediction:gait_mobility"", ""missing_singleton=Age""]",[],pending
+4059,domain_template,complete,pass,0,0,[],[],pending
+4059,taxonomy_conditioned_llm,contract_failed,pass,1,0,"[""missing_or_inexact_group=supports_prediction:gait_mobility""]",[],pending
+41282,domain_template,complete,pass,0,0,[],[],pending
+41282,taxonomy_conditioned_llm,complete,pass,0,0,[],[],pending
+50860,domain_template,complete,pass,0,0,[],[],pending
+50860,taxonomy_conditioned_llm,contract_failed,pass,2,0,"[""missing_singleton=Postural Instability at Dx"", ""missing_singleton=Age""]",[],pending
+116531,domain_template,complete,pass,0,0,[],[],pending
+116531,taxonomy_conditioned_llm,contract_failed,pass,2,0,"[""missing_singleton=Gait"", ""missing_singleton=Urinary Problems""]",[],pending
+186755,domain_template,complete,pass,0,0,[],[],pending
+186755,taxonomy_conditioned_llm,complete,pass,0,0,[],[],pending
+3001,domain_template,complete,pass,0,0,[],[],pending
+3001,taxonomy_conditioned_llm,contract_failed,pass,1,0,"[""missing_or_inexact_group=opposes_prediction:gait_mobility""]",[],pending
+3054,domain_template,complete,pass,0,0,[],[],pending
+3054,taxonomy_conditioned_llm,complete,pass,0,0,[],[],pending
+3224,domain_template,complete,pass,0,0,[],[],pending
+3224,taxonomy_conditioned_llm,contract_failed,pass,2,0,"[""missing_or_inexact_group=supports_prediction:gait_mobility"", ""missing_or_inexact_group=opposes_prediction:gait_mobility""]",[],pending
+3530,domain_template,complete,pass,0,0,[],[],pending
+3530,taxonomy_conditioned_llm,contract_failed,pass,2,0,"[""missing_singleton=FOG (Freezing of Gait)"", ""missing_singleton=Urinary Problems""]",[],pending
+3758,domain_template,complete,pass,0,0,[],[],pending
+3758,taxonomy_conditioned_llm,contract_failed,pass,1,0,"[""missing_or_inexact_group=supports_prediction:gait_mobility""]",[],pending
+4030,domain_template,complete,pass,0,0,[],[],pending
+4030,taxonomy_conditioned_llm,complete,pass,0,0,[],[],pending
+4054,domain_template,complete,pass,0,0,[],[],pending
+4054,taxonomy_conditioned_llm,complete,pass,0,0,[],[],pending
+4098,domain_template,complete,pass,0,0,[],[],pending
+4098,taxonomy_conditioned_llm,complete,pass,0,0,[],[],pending
+40538,domain_template,complete,pass,0,0,[],[],pending
+40538,taxonomy_conditioned_llm,contract_failed,pass,1,0,"[""missing_or_inexact_group=supports_prediction:gait_mobility""]",[],pending
+179752,domain_template,complete,pass,0,0,[],[],pending
+179752,taxonomy_conditioned_llm,complete,pass,0,0,[],[],pending
+3826,domain_template,complete,pass,0,0,[],[],pending
+3826,taxonomy_conditioned_llm,contract_failed,pass,1,0,"[""missing_singleton=Dopaminergic Therapy""]",[],pending
+100001,domain_template,complete,pass,0,0,[],[],pending
+100001,taxonomy_conditioned_llm,complete,pass,0,0,[],[],pending
+101566,domain_template,complete,pass,0,0,[],[],pending
+101566,taxonomy_conditioned_llm,contract_failed,pass,5,0,"[""missing_singleton=Age"", ""missing_singleton=FOG (Freezing of Gait)"", ""missing_singleton=Mobility Summary"", ""missing_singleton=Dopaminergic Therapy"", ""missing_singleton=Daytime Sleepiness""]",[],pending
+102479,domain_template,complete,pass,0,0,[],[],pending
+102479,taxonomy_conditioned_llm,contract_failed,pass,3,0,"[""missing_singleton=Age"", ""missing_singleton=Dopaminergic Therapy"", ""missing_singleton=Rigidity at Dx""]",[],pending
+130828,domain_template,complete,pass,0,0,[],[],pending
+130828,taxonomy_conditioned_llm,contract_failed,pass,3,0,"[""missing_singleton=FOG (Freezing of Gait)"", ""missing_singleton=UPDRS-IV Total"", ""missing_singleton=Dopaminergic Therapy""]",[],pending
+190603,domain_template,complete,pass,0,0,[],[],pending
+190603,taxonomy_conditioned_llm,contract_failed,pass,1,0,"[""missing_or_inexact_group=supports_prediction:gait_mobility""]",[],pending
+218338,domain_template,complete,pass,0,0,[],[],pending
+218338,taxonomy_conditioned_llm,contract_failed,pass,2,0,"[""missing_singleton=Dopaminergic Therapy"", ""missing_singleton=Rigidity at Dx""]",[],pending
+224574,domain_template,complete,pass,0,0,[],[],pending
+224574,taxonomy_conditioned_llm,complete,pass,0,0,[],[],pending
+241069,domain_template,complete,pass,0,0,[],[],pending
+241069,taxonomy_conditioned_llm,contract_failed,pass,1,0,"[""missing_singleton=Dopaminergic Therapy""]",[],pending
+292826,domain_template,complete,pass,0,0,[],[],pending
+292826,taxonomy_conditioned_llm,contract_failed,pass,3,0,"[""missing_singleton=Dopaminergic Therapy"", ""missing_singleton=FOG (Freezing of Gait)"", ""missing_singleton=PD Duration""]",[],pending

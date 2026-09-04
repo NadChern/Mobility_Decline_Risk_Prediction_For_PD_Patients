@@ -1,0 +1,13 @@
+method,category,n_patients,title_format_correct_mean,section_order_correct_mean,stage_template_correct_mean,table_header_format_correct_mean,table_row_format_mean,table_numbering_correct_mean,supporting_table_first_mean,forbidden_content_clean_mean,overall_structure_compliant_mean,n_components_passed_mean
+gemini,mild,10,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,8.0
+template,mild,10,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,8.0
+template_grouped,mild,10,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,8.0
+gemini,moderate,10,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,8.0
+template,moderate,10,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,8.0
+template_grouped,moderate,10,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,8.0
+gemini,no_falls,10,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,8.0
+template,no_falls,10,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,8.0
+template_grouped,no_falls,10,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,8.0
+gemini,overall,30,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,8.0
+template,overall,30,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,8.0
+template_grouped,overall,30,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,8.0

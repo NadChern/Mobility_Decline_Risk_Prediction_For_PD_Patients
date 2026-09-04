@@ -17,7 +17,7 @@ from pathlib import Path
 from ..contract import PATIENT_ID_COLUMN
 from ..data_loader import y_pred_final, patient_ids
 from ..explanation_builder import build_patient_explanation_data_full
-from ..llm import generate_explanation, _displayable
+from ..llm import generate_explanation, _displayable, _interpretation_factor_names
 
 RESULTS_DIR = Path(__file__).resolve().parent.parent.parent / "evaluation_results"
 GENERATIONS_PATH = RESULTS_DIR / "llm_generations.csv"
@@ -28,6 +28,7 @@ _EXPECTED_COLS = [
     "patient_id", "category", "stage", "model", "temperature", "run", "explanation",
     "contributing", "contributing_shap",
     "mitigating", "mitigating_shap",
+    "supporting_factors", "opposing_factors",
 ]
 
 
@@ -91,6 +92,7 @@ def _build_row(patient_id, patient_info, temperature, run, model, explanation):
 
     c, c_shap = _pipe_shap(contributing)
     m, m_shap = _pipe_shap(mitigating)
+    supporting_factors, opposing_factors = _interpretation_factor_names(patient_info)
 
     return {
         "patient_id":        patient_id,
@@ -104,6 +106,8 @@ def _build_row(patient_id, patient_info, temperature, run, model, explanation):
         "contributing_shap": c_shap,
         "mitigating":        m,
         "mitigating_shap":   m_shap,
+        "supporting_factors": "|".join(supporting_factors),
+        "opposing_factors":   "|".join(opposing_factors),
     }
 
 
@@ -143,7 +147,13 @@ def generate_generations(temperatures, n_runs, output_path=GENERATIONS_PATH):
                 )
                 print(tag, end=" ... ", flush=True)
                 try:
-                    result = generate_explanation(patient_id, temperature=temp)
+                    # Reuse the exact packet already built for this patient. The saved evidence
+                    # columns and the prompt now derive from the same in-memory object.
+                    result = generate_explanation(
+                        patient_id=patient_id,
+                        patient_info=patient_info,
+                        temperature=temp,
+                    )
                     rows.append(_build_row(
                         patient_id=patient_id,
                         patient_info=patient_info,
@@ -184,8 +194,9 @@ def validate_generations(path=GENERATIONS_PATH):
      11. Completeness: every (patient, temperature, run) present once per model (catches
          rows silently dropped by failed LLM calls)
      12. SHAP magnitude columns parse as non-negative floats
-     13. contributing ∩ mitigating disjoint (a feature can't be SHAP>0 and SHAP<0)
-     14. Each explanation references its own patient_id (row↔explanation alignment)
+      13. contributing ∩ mitigating disjoint (a feature can't be SHAP>0 and SHAP<0)
+      14. Saved supporting/opposing lists exactly match the first-table top 5 / second-table top 3
+      15. Each explanation references its own patient_id (row↔explanation alignment)
 
     Warnings (reported but do NOT fail):
       - Patient set differs from the seed-42 selection
@@ -325,7 +336,28 @@ def validate_generations(path=GENERATIONS_PATH):
         if n_overlap:
             errors.append(f"{n_overlap} rows have a feature in both contributing and mitigating")
 
-    # 14. Each explanation references its own patient_id (row↔explanation alignment)
+    # 14. Explicit interpretation roles match the actual displayed-table order and prediction.
+    role_columns = {"supporting_factors", "opposing_factors", "contributing", "mitigating"}
+    if role_columns.issubset(df.columns):
+        bad_roles = 0
+        for _, row in df.iterrows():
+            contributing = [x for x in str(row["contributing"]).split("|") if x]
+            mitigating = [x for x in str(row["mitigating"]).split("|") if x]
+            if row["category"] == "moderate":
+                expected_supporting, expected_opposing = contributing[:5], mitigating[:3]
+            else:
+                expected_supporting, expected_opposing = mitigating[:5], contributing[:3]
+            saved_supporting = [x for x in str(row["supporting_factors"]).split("|") if x]
+            saved_opposing = [x for x in str(row["opposing_factors"]).split("|") if x]
+            if (saved_supporting != expected_supporting or saved_opposing != expected_opposing):
+                bad_roles += 1
+        if bad_roles:
+            errors.append(
+                f"{bad_roles} rows have supporting/opposing lists that do not match the displayed "
+                "first-table top 5 / second-table top 3"
+            )
+
+    # 15. Each explanation references its own patient_id (row↔explanation alignment)
     misref = sum(
         1 for _, row in df.iterrows()
         if str(row["patient_id"]) not in str(row["explanation"])

@@ -1,0 +1,9 @@
+method,category,n_patients,n_gold_grouping_opportunity,n_with_group_claim,pairwise_grouping_precision_macro_mean,pairwise_grouping_precision_n_evaluable,pairwise_grouping_recall_macro_mean,pairwise_grouping_recall_n_evaluable,pairwise_grouping_f1_macro_mean,pairwise_grouping_f1_n_evaluable,explicit_membership_recall_macro_mean,explicit_membership_recall_n_evaluable,contrastive_linkage_macro_mean,contrastive_linkage_n_evaluable,gold_pair_count,predicted_pair_count,true_positive_pair_count,pairwise_grouping_precision_micro,pairwise_grouping_recall_micro,pairwise_grouping_f1_micro,exact_pair_set_agreement_mean,exact_pair_set_agreement_n_evaluable,exact_pair_set_agreement_with_opportunity_mean,exact_pair_set_agreement_with_opportunity_n_evaluable,spurious_group_claim_rate_no_opportunity,spurious_group_claim_n_evaluable
+domain_template,mild,10,10,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,29,29,29,1.0,1.0,1.0,1.0,10,1.0,10,,0
+taxonomy_conditioned_llm,mild,10,10,10,1.0,10,1.0,10,1.0,10,1.0,10,0.95,10,29,29,29,1.0,1.0,1.0,1.0,10,1.0,10,,0
+domain_template,moderate,10,9,9,1.0,9,1.0,9,1.0,9,1.0,9,1.0,10,21,21,21,1.0,1.0,1.0,1.0,10,1.0,9,0.0,1
+taxonomy_conditioned_llm,moderate,10,9,9,1.0,9,1.0,9,1.0,9,1.0,9,1.0,10,21,21,21,1.0,1.0,1.0,1.0,10,1.0,9,0.0,1
+domain_template,no_falls,10,8,8,1.0,8,1.0,8,1.0,8,1.0,8,1.0,10,10,10,10,1.0,1.0,1.0,1.0,10,1.0,8,0.0,2
+taxonomy_conditioned_llm,no_falls,10,8,8,1.0,8,1.0,8,1.0,8,1.0,8,1.0,10,10,10,10,1.0,1.0,1.0,1.0,10,1.0,8,0.0,2
+domain_template,overall,30,27,27,1.0,27,1.0,27,1.0,27,1.0,27,1.0,30,60,60,60,1.0,1.0,1.0,1.0,30,1.0,27,0.0,3
+taxonomy_conditioned_llm,overall,30,27,27,1.0,27,1.0,27,1.0,27,1.0,27,0.9833333333333333,30,60,60,60,1.0,1.0,1.0,1.0,30,1.0,27,0.0,3

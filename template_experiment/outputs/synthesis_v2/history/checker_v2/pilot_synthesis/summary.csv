@@ -1,0 +1,13 @@
+method,category,n_patients,n_gold_grouping_opportunity,n_with_group_claim,pairwise_grouping_precision_macro_mean,pairwise_grouping_precision_n_evaluable,pairwise_grouping_recall_macro_mean,pairwise_grouping_recall_n_evaluable,pairwise_grouping_f1_macro_mean,pairwise_grouping_f1_n_evaluable,explicit_membership_recall_macro_mean,explicit_membership_recall_n_evaluable,contrastive_linkage_macro_mean,contrastive_linkage_n_evaluable,gold_pair_count,predicted_pair_count,true_positive_pair_count,pairwise_grouping_precision_micro,pairwise_grouping_recall_micro,pairwise_grouping_f1_micro,exact_pair_set_agreement_mean,exact_pair_set_agreement_n_evaluable,exact_pair_set_agreement_with_opportunity_mean,exact_pair_set_agreement_with_opportunity_n_evaluable,spurious_group_claim_rate_no_opportunity,spurious_group_claim_n_evaluable
+gemini,mild,10,10,10,0.89,10,0.6333333333333333,10,0.630952380952381,10,0.7777777777777778,9,0.95,10,29,18,13,0.7222222222222222,0.4482758620689655,0.5531914893617021,0.3,10,0.3,10,,0
+template,mild,10,10,0,,0,0.0,10,0.0,10,,0,1.0,10,29,0,0,,0.0,0.0,0.0,10,0.0,10,,0
+template_grouped,mild,10,10,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,29,29,29,1.0,1.0,1.0,1.0,10,1.0,10,,0
+gemini,moderate,10,9,8,0.5,8,0.4444444444444444,9,0.3566137566137566,9,0.8333333333333333,5,1.0,10,21,17,8,0.47058823529411764,0.38095238095238093,0.42105263157894735,0.1,10,0.0,9,0.0,1
+template,moderate,10,9,0,,0,0.0,9,0.0,9,,0,1.0,10,21,0,0,,0.0,0.0,0.1,10,0.0,9,0.0,1
+template_grouped,moderate,10,9,9,1.0,9,1.0,9,1.0,9,1.0,9,1.0,10,21,21,21,1.0,1.0,1.0,1.0,10,1.0,9,0.0,1
+gemini,no_falls,10,8,10,0.5833333333333333,10,0.7916666666666666,8,0.5900000000000001,10,0.9333333333333332,5,1.0,10,10,16,7,0.4375,0.7,0.5384615384615384,0.5,10,0.625,8,1.0,2
+template,no_falls,10,8,0,,0,0.0,8,0.0,8,,0,1.0,10,10,0,0,,0.0,0.0,0.2,10,0.0,8,0.0,2
+template_grouped,no_falls,10,8,8,1.0,8,1.0,8,1.0,8,1.0,8,1.0,10,10,10,10,1.0,1.0,1.0,1.0,10,1.0,8,0.0,2
+gemini,overall,30,27,28,0.6690476190476191,28,0.6172839506172839,27,0.5316912972085386,29,0.8333333333333333,19,0.9833333333333333,30,60,51,28,0.5490196078431373,0.4666666666666667,0.5045045045045046,0.3,30,0.2962962962962963,27,0.6666666666666666,3
+template,overall,30,27,0,,0,0.0,27,0.0,27,,0,1.0,30,60,0,0,,0.0,0.0,0.1,30,0.0,27,0.0,3
+template_grouped,overall,30,27,27,1.0,27,1.0,27,1.0,27,1.0,27,1.0,30,60,60,60,1.0,1.0,1.0,1.0,30,1.0,27,0.0,3

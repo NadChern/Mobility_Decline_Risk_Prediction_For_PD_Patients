@@ -1,0 +1,34 @@
+{
+  "audit_id": "J-3001-P-1-c81915",
+  "original_runtime_config": {
+    "final_answer_source": "content_only",
+    "httpx_version": "0.28.1",
+    "max_tokens": 2048,
+    "openrouter_sdk_version": "0.9.1",
+    "reasoning": null,
+    "runtime_version": "openrouter-judge-runtime-v2",
+    "sdk_retries": 0,
+    "sdk_timeout_ms": 120000,
+    "timeout_seconds": 120
+  },
+  "prompt_hash": "2bb8030d3f143f4b18aeb01d6b638f80a3c8da3ce0eb27ea32b753a51f8225db",
+  "retest_runtime_config": {
+    "final_answer_source": "content_only",
+    "httpx_version": "0.28.1",
+    "max_tokens": 2048,
+    "openrouter_sdk_version": "0.9.1",
+    "profile_version": "glm_paired_low_v1",
+    "reasoning": {
+      "effort": "low"
+    },
+    "runtime_version": "openrouter-judge-runtime-v2",
+    "sdk_retries": 0,
+    "sdk_timeout_ms": 120000,
+    "timeout_seconds": 120
+  },
+  "scope": "one-call paired-judge smoke retest, not a full panel",
+  "source": "/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/template_experiment/outputs/synthesis_v2/audits/checker_v2_1/judge_part1_runtime_v2",
+  "source_requests_sha256": "3d525a49bb3cfdddc2ca00ed9c37047b5fe95689f3f918c721b10b22bdc1e8ca",
+  "source_responses_sha256": "068a085fd699e3b4096283efebc591963954af2038b96b90060fb44dfe0f407f",
+  "temperature": 0
+}

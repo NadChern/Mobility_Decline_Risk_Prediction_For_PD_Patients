@@ -1,0 +1,13 @@
+method,category,n_patients,factor_recall_mean,nonempty_section_coverage_mean,classification_field_coverage_mean,expected_table_field_completeness_mean,displayed_stage_coverage_mean,required_stage_evidence_coverage_mean,interpretation_key_factor_coverage_mean,opposing_evidence_coverage_mean,overall_displayed_contract_complete_mean,overall_full_pipeline_complete_mean
+gemini,mild,10,1.0,1.0,1.0,1.0,1.0,0.5,1.0,1.0,1.0,0.0
+template,mild,10,1.0,1.0,1.0,1.0,1.0,0.5,1.0,1.0,1.0,0.0
+template_grouped,mild,10,1.0,1.0,1.0,1.0,1.0,0.5,1.0,1.0,1.0,0.0
+gemini,moderate,10,1.0,1.0,1.0,1.0,1.0,0.5,1.0,1.0,1.0,0.0
+template,moderate,10,1.0,1.0,1.0,1.0,1.0,0.5,1.0,1.0,1.0,0.0
+template_grouped,moderate,10,1.0,1.0,1.0,1.0,1.0,0.5,1.0,1.0,1.0,0.0
+gemini,no_falls,10,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+template,no_falls,10,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+template_grouped,no_falls,10,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+gemini,overall,30,1.0,1.0,1.0,1.0,1.0,0.6666666666666666,1.0,1.0,1.0,0.3333333333333333
+template,overall,30,1.0,1.0,1.0,1.0,1.0,0.6666666666666666,1.0,1.0,1.0,0.3333333333333333
+template_grouped,overall,30,1.0,1.0,1.0,1.0,1.0,0.6666666666666666,1.0,1.0,1.0,0.3333333333333333

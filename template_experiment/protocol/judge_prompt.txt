@@ -1,0 +1,1 @@
+Paired prompt template is implemented by build_judge_prompt in template_experiment/experimental/llm_judge.py. Required JSON keys: scores_a, scores_b, preference, rationale. Method identity is excluded; both presentation orders are run.

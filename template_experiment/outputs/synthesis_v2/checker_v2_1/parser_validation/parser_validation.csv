@@ -1,0 +1,17 @@
+case_id,exact_relation_match,source_spans_valid,expected_relations,observed_relations
+P01,True,True,"[[""supporting"", ""gait_mobility"", [""FOG (Freezing of Gait)"", ""Gait""]]]","[[""supporting"", ""gait_mobility"", [""FOG (Freezing of Gait)"", ""Gait""]]]"
+P02,True,True,"[[""supporting"", ""motor_impairment"", [""H&Y Stage"", ""UPDRS-III Total""]]]","[[""supporting"", ""motor_impairment"", [""H&Y Stage"", ""UPDRS-III Total""]]]"
+P03,True,True,"[[""opposing"", ""autonomic_symptoms"", [""Fainting"", ""Postural Hypotension""]]]","[[""opposing"", ""autonomic_symptoms"", [""Fainting"", ""Postural Hypotension""]]]"
+P04,True,True,"[[""supporting"", ""gait_mobility"", [""FOG (Freezing of Gait)"", ""Gait""]]]","[[""supporting"", ""gait_mobility"", [""FOG (Freezing of Gait)"", ""Gait""]]]"
+P05,True,True,"[[""supporting"", ""motor_impairment"", [""Rigidity at Dx"", ""UPDRS-III Total""]]]","[[""supporting"", ""motor_impairment"", [""Rigidity at Dx"", ""UPDRS-III Total""]]]"
+P06,True,True,[],[]
+P07,True,True,[],[]
+P08,True,True,[],[]
+P09,True,True,[],[]
+P10,True,True,"[[""opposing"", ""motor_impairment"", [""Rigidity at Dx"", ""UPDRS-III Total""]]]","[[""opposing"", ""motor_impairment"", [""Rigidity at Dx"", ""UPDRS-III Total""]]]"
+P11,True,True,"[[""supporting"", ""gait_mobility"", [""Gait"", ""Postural Stability""]]]","[[""supporting"", ""gait_mobility"", [""Gait"", ""Postural Stability""]]]"
+P12,True,True,"[[""opposing"", ""sleep_wake_symptoms"", [""Daytime Sleepiness"", ""UPDRS-I Total""]]]","[[""opposing"", ""sleep_wake_symptoms"", [""Daytime Sleepiness"", ""UPDRS-I Total""]]]"
+P13,True,True,"[[""supporting"", ""autonomic_symptoms"", [""Fainting"", ""Lightheadedness on Standing""]]]","[[""supporting"", ""autonomic_symptoms"", [""Fainting"", ""Lightheadedness on Standing""]]]"
+P14,True,True,"[[""supporting"", ""disease_course"", [""Age"", ""PD Duration""]]]","[[""supporting"", ""disease_course"", [""Age"", ""PD Duration""]]]"
+P15,True,True,[],[]
+P16,True,True,[],[]

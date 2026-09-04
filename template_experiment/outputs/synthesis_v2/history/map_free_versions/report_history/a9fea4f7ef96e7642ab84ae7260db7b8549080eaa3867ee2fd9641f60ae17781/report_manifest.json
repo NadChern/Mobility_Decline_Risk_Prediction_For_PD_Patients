@@ -1,0 +1,37 @@
+{
+  "adjudication_rubric": {
+    "development_scope": "pilot-developed author adjudication; not independent clinical validation",
+    "sha256": "7e824298e346a9e7ee5f81e8b8df81d02cda37d6e9a1832e3b8dec2a0dcb0b60",
+    "snapshot": "rubric_snapshots/7e824298e346a9e7ee5f81e8b8df81d02cda37d6e9a1832e3b8dec2a0dcb0b60.md",
+    "source": "/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/template_experiment/protocol/adjudication_rubric.md",
+    "version": "adjudication-rubric-v1.1"
+  },
+  "adjudication_source": "/Users/nadin/Documents/Mobility_Decline_Risk_Prediction_For_PD_Patients/template_experiment/outputs/synthesis_v2/part2a_map_free/disagreement_worksheet.csv",
+  "adjudication_source_sha256": "be1ce5a1c97d2e6c58fab2bda4e8afb26730fa46b8284453e34dee81a9965837",
+  "adjudication_status": {
+    "author_counts": {
+      "granularity_difference": 7,
+      "plausible_alternative_abstraction": 13
+    },
+    "automatic_counts": {
+      "granularity_difference": 15,
+      "over_grouping": 2,
+      "plausible_alternative_abstraction": 3
+    },
+    "complete_counts": {
+      "granularity_difference": 7,
+      "plausible_alternative_abstraction": 13
+    },
+    "complete_reviews": 20,
+    "invalid_label_ids": [],
+    "labels_entered": 20,
+    "missing_rationale_ids": [],
+    "stale_review_ids": [],
+    "total_disagreements": 20
+  },
+  "parser_version": "explicit-group-claims-v2.1-pilot",
+  "patient_metrics_sha256": "1c917f99e470a4fcca58fa986727435a21ba547936771f772a0c0edc6999f5b4",
+  "report_generator_sha256": "56179e94c144bf79abbb68dd225e248c0c1b697b1d8bca123f72235f33b83471",
+  "report_version": "map-free-adjudicated-report-v1.1",
+  "worksheet_sha256": "be1ce5a1c97d2e6c58fab2bda4e8afb26730fa46b8284453e34dee81a9965837"
+}

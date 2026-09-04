@@ -12,7 +12,7 @@ shap:
 # LLM Settings (for generating natural language explanations)
 llm:
   # Provider: "openrouter" or "google"
-  provider: "openrouter"
+  provider: "google"
 
   # Temperature for LLM generation (0 = deterministic)
   temperature: 0
@@ -23,4 +23,34 @@ llm:
 
   # Google AI settings (requires GOOGLE_API_KEY in .env)
   google:
-    model: "gemini-3.1-flash-lite"
+    model: "gemini-3.8-flash"
+
+# Evaluation-only LLM settings. These models judge blinded synthesis pairs; they do not generate
+# patient explanations and must never receive method identities.
+evaluation:
+  synthesis_judges:
+    provider: "openrouter"
+    temperature: 0
+    max_tokens: 2048
+    # null preserves provider-default reasoning. Any change starts a new request version.
+    reasoning: null
+    # Retained provenance for the successful isolated pilot retest.
+    retest_profiles:
+      glm_paired_low_v1:
+        model: "z-ai/glm-5.3-flash"
+        max_tokens: 2048
+        reasoning:
+          effort: low
+        request_timeout: 120
+    repetitions_per_order: 3
+    reverse_order: true
+    models:
+      - id: "z-ai/glm-5.3-flash"
+        name: "Z.ai GLM 5.3 Flash"
+        url: "https://openrouter.ai/z-ai/glm-5.3-flash"
+        # Applied to both panels in the new panel-v3 request collection.
+        reasoning:
+          effort: low
+      - id: "qwen/qwen3.8-flash"
+        name: "Qwen3.8 Flash"
+        url: "https://openrouter.ai/qwen/qwen3.8-flash"

@@ -1,0 +1,26 @@
+{
+  "qwen/qwen3.8-flash": {
+    "final_answer_source": "content_only",
+    "httpx_version": "0.28.1",
+    "max_tokens": 2048,
+    "openrouter_sdk_version": "0.9.1",
+    "reasoning": null,
+    "runtime_version": "openrouter-judge-runtime-v2",
+    "sdk_retries": 0,
+    "sdk_timeout_ms": 120000,
+    "timeout_seconds": 120
+  },
+  "z-ai/glm-5.3-flash": {
+    "final_answer_source": "content_only",
+    "httpx_version": "0.28.1",
+    "max_tokens": 2048,
+    "openrouter_sdk_version": "0.9.1",
+    "reasoning": {
+      "effort": "low"
+    },
+    "runtime_version": "openrouter-judge-runtime-v2",
+    "sdk_retries": 0,
+    "sdk_timeout_ms": 120000,
+    "timeout_seconds": 120
+  }
+}

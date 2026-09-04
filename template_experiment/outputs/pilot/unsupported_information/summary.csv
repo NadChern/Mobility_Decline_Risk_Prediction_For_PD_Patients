@@ -1,0 +1,13 @@
+method,category,n_patients,unsupported_factor_rate_mean,duplicate_factor_rate_mean,prose_unsupported_feature_rate_mean,causal_claim_sentence_rate_mean,automated_unsupported_information_free_mean,unsupported_factor_count_total,duplicate_factor_count_total,unsupported_value_count_total,unsupported_scale_count_total,prose_unsupported_feature_count_total,causal_claim_sentence_count_total
+gemini,mild,10,0.0,0.0,0.0,0.0,1.0,0,0,0,0,0,0
+template,mild,10,0.0,0.0,0.0,0.0,1.0,0,0,0,0,0,0
+template_grouped,mild,10,0.0,0.0,0.0,0.0,1.0,0,0,0,0,0,0
+gemini,moderate,10,0.0,0.0,0.0,0.0,1.0,0,0,0,0,0,0
+template,moderate,10,0.0,0.0,0.0,0.0,1.0,0,0,0,0,0,0
+template_grouped,moderate,10,0.0,0.0,0.0,0.0,1.0,0,0,0,0,0,0
+gemini,no_falls,10,0.0,0.0,0.0,0.0,1.0,0,0,0,0,0,0
+template,no_falls,10,0.0,0.0,0.0,0.0,1.0,0,0,0,0,0,0
+template_grouped,no_falls,10,0.0,0.0,0.0,0.0,1.0,0,0,0,0,0,0
+gemini,overall,30,0.0,0.0,0.0,0.0,1.0,0,0,0,0,0,0
+template,overall,30,0.0,0.0,0.0,0.0,1.0,0,0,0,0,0,0
+template_grouped,overall,30,0.0,0.0,0.0,0.0,1.0,0,0,0,0,0,0

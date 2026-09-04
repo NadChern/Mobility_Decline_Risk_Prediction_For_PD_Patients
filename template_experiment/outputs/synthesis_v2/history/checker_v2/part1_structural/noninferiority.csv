@@ -1,0 +1,2 @@
+endpoint,n_patients,mean_difference_llm_minus_template,ci95_lower,ci95_upper,noninferiority_margin,noninferior,bootstrap_replicates,bootstrap_seed
+patient-level pairwise grouping F1 with grouping opportunity,27,0.0,0.0,0.0,0.05,True,10000,20260903

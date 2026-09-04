@@ -1,0 +1,216 @@
+[
+  {
+    "case_id": "C01_existing_gait_domain",
+    "supporting": [
+      {
+        "short_name": "Gait",
+        "display_value": "2",
+        "interpretation": "Clinician-rated gait impairment. 0-4; higher = worse",
+        "displayable": true
+      },
+      {
+        "short_name": "Timed Up-and-Go",
+        "display_value": "18.4",
+        "interpretation": "Timed Up-and-Go seconds; higher = slower mobility",
+        "displayable": true
+      }
+    ],
+    "opposing": [
+      {
+        "short_name": "MoCA",
+        "display_value": "24",
+        "interpretation": "Montreal Cognitive Assessment. 0-30; higher = better cognition",
+        "displayable": true
+      }
+    ],
+    "unseen_features": [
+      "Timed Up-and-Go"
+    ],
+    "acceptable_groups": [
+      [
+        "Gait",
+        "Timed Up-and-Go"
+      ]
+    ],
+    "target_domains": {
+      "Timed Up-and-Go": "gait_mobility"
+    },
+    "new_domain": false
+  },
+  {
+    "case_id": "C02_existing_balance_domain",
+    "supporting": [
+      {
+        "short_name": "Postural Stability",
+        "display_value": "2",
+        "interpretation": "Postural-stability item. 0-4; higher = worse",
+        "displayable": true
+      },
+      {
+        "short_name": "Berg Balance Scale",
+        "display_value": "38",
+        "interpretation": "Berg Balance Scale. 0-56; lower = poorer balance",
+        "displayable": true
+      }
+    ],
+    "opposing": [
+      {
+        "short_name": "GDS-15",
+        "display_value": "6",
+        "interpretation": "Geriatric Depression Scale. 0-15; higher = more symptoms",
+        "displayable": true
+      }
+    ],
+    "unseen_features": [
+      "Berg Balance Scale"
+    ],
+    "acceptable_groups": [
+      [
+        "Postural Stability",
+        "Berg Balance Scale"
+      ]
+    ],
+    "target_domains": {
+      "Berg Balance Scale": "gait_mobility"
+    },
+    "new_domain": false
+  },
+  {
+    "case_id": "C03_existing_autonomic_domain",
+    "supporting": [
+      {
+        "short_name": "Fainting",
+        "display_value": "1",
+        "interpretation": "Fainting frequency. 0=never; 4=very frequent",
+        "displayable": true
+      },
+      {
+        "short_name": "Orthostatic BP Drop",
+        "display_value": "24 mmHg",
+        "interpretation": "Systolic blood-pressure drop on standing; higher = larger drop",
+        "displayable": true
+      }
+    ],
+    "opposing": [
+      {
+        "short_name": "MoCA",
+        "display_value": "24",
+        "interpretation": "Montreal Cognitive Assessment. 0-30; higher = better cognition",
+        "displayable": true
+      }
+    ],
+    "unseen_features": [
+      "Orthostatic BP Drop"
+    ],
+    "acceptable_groups": [
+      [
+        "Fainting",
+        "Orthostatic BP Drop"
+      ]
+    ],
+    "target_domains": {
+      "Orthostatic BP Drop": "autonomic_symptoms"
+    },
+    "new_domain": false
+  },
+  {
+    "case_id": "C04_new_fall_concern_domain",
+    "supporting": [
+      {
+        "short_name": "Fear of Falling",
+        "display_value": "high",
+        "interpretation": "Self-reported concern about falling; low/moderate/high",
+        "displayable": true
+      },
+      {
+        "short_name": "Falls Efficacy Scale",
+        "display_value": "31",
+        "interpretation": "Falls Efficacy Scale; higher = greater concern",
+        "displayable": true
+      }
+    ],
+    "opposing": [
+      {
+        "short_name": "MoCA",
+        "display_value": "24",
+        "interpretation": "Montreal Cognitive Assessment. 0-30; higher = better cognition",
+        "displayable": true
+      }
+    ],
+    "unseen_features": [
+      "Fear of Falling",
+      "Falls Efficacy Scale"
+    ],
+    "acceptable_groups": [
+      [
+        "Fear of Falling",
+        "Falls Efficacy Scale"
+      ]
+    ],
+    "target_domains": {
+      "Fear of Falling": "fall_concern",
+      "Falls Efficacy Scale": "fall_concern"
+    },
+    "new_domain": true
+  },
+  {
+    "case_id": "C05_novel_cross_domain_combination",
+    "supporting": [
+      {
+        "short_name": "MoCA",
+        "display_value": "24",
+        "interpretation": "Montreal Cognitive Assessment. 0-30; higher = better cognition",
+        "displayable": true
+      },
+      {
+        "short_name": "GDS-15",
+        "display_value": "6",
+        "interpretation": "Geriatric Depression Scale. 0-15; higher = more symptoms",
+        "displayable": true
+      }
+    ],
+    "opposing": [
+      {
+        "short_name": "Gait",
+        "display_value": "2",
+        "interpretation": "Clinician-rated gait impairment. 0-4; higher = worse",
+        "displayable": true
+      }
+    ],
+    "unseen_features": [],
+    "acceptable_groups": [],
+    "target_domains": {},
+    "new_domain": false
+  },
+  {
+    "case_id": "C06_one_sided_unseen",
+    "supporting": [
+      {
+        "short_name": "Gait",
+        "display_value": "2",
+        "interpretation": "Clinician-rated gait impairment. 0-4; higher = worse",
+        "displayable": true
+      },
+      {
+        "short_name": "Timed Up-and-Go",
+        "display_value": "21.0",
+        "interpretation": "Timed Up-and-Go seconds; higher = slower mobility",
+        "displayable": true
+      }
+    ],
+    "opposing": [],
+    "unseen_features": [
+      "Timed Up-and-Go"
+    ],
+    "acceptable_groups": [
+      [
+        "Gait",
+        "Timed Up-and-Go"
+      ]
+    ],
+    "target_domains": {
+      "Timed Up-and-Go": "gait_mobility"
+    },
+    "new_domain": false
+  }
+]

@@ -1,0 +1,13 @@
+method,category,n_patients,outcome_correct_mean,outcome_correct_n_evaluable,direction_accuracy_mean,direction_accuracy_n_evaluable,value_fidelity_mean,value_fidelity_n_evaluable,scale_fidelity_mean,scale_fidelity_n_evaluable,rank_order_fidelity_mean,rank_order_fidelity_n_evaluable,prose_direction_fidelity_mean,prose_direction_fidelity_n_evaluable,prose_grouping_fidelity_mean,prose_grouping_fidelity_n_evaluable,selected_factor_precision_mean,selected_factor_precision_n_evaluable,minimum_group_size_compliance_mean,minimum_group_size_compliance_n_evaluable,prose_value_descriptor_fidelity_mean,prose_value_descriptor_fidelity_n_evaluable,taxonomy_grouping_recall_mean,taxonomy_grouping_recall_n_evaluable,taxonomy_grouping_precision_mean,taxonomy_grouping_precision_n_evaluable
+gemini,mild,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,0.975,10,1.0,10,0.95,10,1.0,9,0.55,10,0.7671428571428571,10
+template,mild,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,,0,,0,,0,,0,,0,,0
+template_grouped,mild,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,,0,1.0,10,1.0,10
+gemini,moderate,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,9,1.0,9,1.0,9,1.0,7,0.5185185185185185,9,0.7222222222222222,9
+template,moderate,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,,0,,0,,0,,0,,0,,0
+template_grouped,moderate,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,9,1.0,9,1.0,9,,0,1.0,9,1.0,9
+gemini,no_falls,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,0.5833333333333333,8,0.5333333333333333,10
+template,no_falls,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,,0,,0,,0,,0,,0,,0
+template_grouped,no_falls,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,10,1.0,8,1.0,8,1.0,8,,0,1.0,8,1.0,8
+gemini,overall,30,1.0,30,1.0,30,1.0,30,1.0,30,1.0,30,1.0,30,0.9913793103448276,29,1.0,29,0.9827586206896551,29,1.0,26,0.5493827160493827,27,0.6725779967159278,29
+template,overall,30,1.0,30,1.0,30,1.0,30,1.0,30,1.0,30,1.0,30,,0,,0,,0,,0,,0,,0
+template_grouped,overall,30,1.0,30,1.0,30,1.0,30,1.0,30,1.0,30,1.0,30,1.0,27,1.0,27,1.0,27,,0,1.0,27,1.0,27

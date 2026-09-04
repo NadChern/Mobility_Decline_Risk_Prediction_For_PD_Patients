@@ -1,0 +1,13 @@
+# Taxonomy-conditioned prompt twin
+
+Base prompt: the exact text returned by `explanation.llm._build_prompt(patient_info)`.
+
+The taxonomy condition adds only:
+
+1. A data block before `TASK:` containing factor, evidence side, rank, domain ID, and domain label
+   for the same top-5/top-3 interpretation factors.
+2. This instruction immediately before the unchanged `MODEL INTERPRETATION` instruction:
+
+- TAXONOMY CONDITION ONLY: For the Model Interpretation, use the supplied domain assignments instead of inferring categories. When at least two selected factors on the same evidence side share a domain, combine them under its supplied domain label and name the individual members. Keep factors that do not share a domain with another selected same-side factor as individual factors. Treat this taxonomy as an experimental organization, not independent clinical truth.
+
+The complete per-patient prompts and hashes are stored in Dataset A records.

@@ -54,18 +54,26 @@ def _extract_text_content(response):
     return str(content)
 
 
-def build_langchain_llm(provider=None, model_name=None, temperature=LLM_TEMPERATURE):
+def build_langchain_llm(provider=None, model_name=None, temperature=LLM_TEMPERATURE,
+                       *, request_timeout=None, max_retries=None):
     """Create a LangChain LLM client for explanation generation.
 
     Args:
         provider: "openrouter" or "google". If None, uses config.yaml setting.
         model_name: Model name override. If None, uses config.yaml setting for the provider.
         temperature: LLM temperature setting.
+        request_timeout: Optional per-request timeout in seconds; otherwise SDK default.
+        max_retries: Optional SDK retry setting; zero disables retries for synthesis collection.
 
     Returns:
         LangChain chat model instance.
     """
     provider = provider or LLM_PROVIDER
+    runtime_options = {}
+    if request_timeout is not None:
+        runtime_options["request_timeout"] = request_timeout
+    if max_retries is not None:
+        runtime_options["max_retries"] = max_retries
 
     if provider == "openrouter":
         try:
@@ -85,6 +93,7 @@ def build_langchain_llm(provider=None, model_name=None, temperature=LLM_TEMPERAT
             model=model_name or OPENROUTER_MODEL,
             temperature=temperature,
             api_key=OPENROUTER_API_KEY,
+            **runtime_options,
         )
 
     elif provider == "google":
@@ -105,6 +114,7 @@ def build_langchain_llm(provider=None, model_name=None, temperature=LLM_TEMPERAT
             model=model_name or GOOGLE_MODEL,
             temperature=temperature,
             google_api_key=GOOGLE_API_KEY,
+            **runtime_options,
         )
 
     else:
@@ -149,6 +159,20 @@ def _ordered_tables(patient_info):
         toward_nofall = (_TOWARD_NOFALL, patient_info["risk_decreasing_features"])
         tables = [toward_nofall, toward_fall]
     return [(header, _displayable(factors)) for header, factors in tables]
+
+
+def _interpretation_factor_names(patient_info):
+    """Return the exact factor lists the interpretation is instructed to cover.
+
+    The first displayed table always supports the prediction and the second opposes it. These
+    explicit roles are returned with every generation so prospective evaluation does not need to
+    reconstruct them later from SHAP sign or outcome-category names.
+    """
+    (_first_header, first_factors), (_second_header, second_factors) = _ordered_tables(patient_info)
+    return (
+        [factor["short_name"] for factor in first_factors[:5]],
+        [factor["short_name"] for factor in second_factors[:3]],
+    )
 
 
 def _bullet_lines(factors):
@@ -211,11 +235,10 @@ INSTRUCTIONS:
 - Build TWO tables exactly as grounded, in the given order and with the given headers. Keep each factor in its group and order; number rows 1..N within each table. For each row: Factor = the name before '|', Patient Value = the value after 'value:', Interpretation / Scale = the FULL text after 'scale/interpretation:'. Reproduce the Interpretation / Scale text EXACTLY and IN FULL — include every scale level and word; do NOT shorten it to the row's matching label, paraphrase it, or omit any part. Copy the Patient Value verbatim too. If a group has no factors, write "No qualifying factors." in place of that table.
 - MODEL INTERPRETATION: write 2-4 sentences explaining the model's {outcome_phrase}.
   1. Begin with "Within this model, the {outcome_phrase} was primarily associated with …".
-  2. Summarize the top 3–5 most influential factors from the FIRST table (those supporting the prediction) in 1–2 broader categories when possible (e.g., gait and mobility, motor complications, non-motor symptoms, cognition, disease duration) rather than restating every factor individually.  
-  3. Then name the top 2-3 most influential factors from the SECOND table that supported the opposite direction, and note that they did not outweigh the factors supporting the {outcome_phrase}.
-  Every factor you mention must appear in a table. Use cautious language ("were associated with", "within this model"). Do NOT imply causality. Do NOT describe factors as clinically protective or risky unless the Interpretation / Scale text supports it. Do NOT introduce features not in the tables. Use "no" or "absence of" for a value of 0.
-
-OUTPUT FORMAT (use this structure exactly):
+  2. For the top 5 available factors from the FIRST table, identify shared clinical concepts and combine related factors into broader categories. Name the individual factors supporting each category.
+  3. Apply the same grouping requirement to the top 3 available factors from the SECOND table, and note that they did not outweigh the factors supporting the {outcome_phrase}.
+  4. Group factors only when at least two selected factors share a single clinical construct. Do not create a compound category by joining different constructs merely to group factors. Do not group factors solely because they share the same value, indicate presence or absence, or support the same prediction direction. If a factor does not share one clinical construct with another selected factor, name it individually.
+  5. Use cautious language ("were associated with", "within this model"). Do NOT imply causality. Do NOT describe factors as clinically protective or risky unless the Interpretation / Scale text supports it. Use “no” or “absence of” for a value of 0 only when the supplied Interpretation / Scale indicates that 0 represents absence.
 
 Clinical Fall Risk Summary for Patient ID: {pid}
 
@@ -235,7 +258,7 @@ Factors are ordered from most to least influential based on their contribution t
 [{second_header} rows, numbered 1..M]
 
 Model Interpretation
-[3-4 sentence interpretation]
+[2-4 sentence interpretation]
 
 Clinical Note
 - Model predictions are intended to support clinical review and should not replace clinical judgment.
@@ -243,18 +266,28 @@ Clinical Note
 - For definitions and interpretation of all variables used by the model, please refer to the Feature Reference Guide (feature_map.xlsx)."""
 
 
-def generate_explanation(patient_id, debug=None, provider=None, model_name=None, temperature=LLM_TEMPERATURE):
+def generate_explanation(
+    patient_id=None,
+    debug=None,
+    provider=None,
+    model_name=None,
+    temperature=LLM_TEMPERATURE,
+    patient_info=None,
+):
     """Generate a clinical explanation document for a patient's fall risk prediction.
 
     Builds the prompt from the deterministic packet, calls the LLM, and returns the
     rendered document along with the prompt and model identity.
 
     Args:
-        patient_id: Patient PATNO identifier
+        patient_id: Patient PATNO identifier. Optional when ``patient_info`` is supplied.
         debug: If True, prints full prompt to console. If None, uses config.yaml setting.
         provider: "openrouter" or "google". If None, uses config.yaml setting.
         model_name: Optional LLM model name override
         temperature: LLM temperature setting
+        patient_info: Optional prebuilt output from
+            ``build_patient_explanation_data_full``. Supplying this allows the LLM and another
+            renderer to consume the exact same in-memory evidence packet without rebuilding it.
 
     Returns:
         Dictionary with 'provider', 'model', 'prompt', and 'explanation' keys
@@ -262,9 +295,18 @@ def generate_explanation(patient_id, debug=None, provider=None, model_name=None,
     if debug is None:
         debug = DEBUG
 
-    # Get patient data and build prompt
-    patient_idx = get_patient_index(patient_id)
-    patient_info = build_patient_explanation_data_full(patient_idx)
+    # Build once by default, while allowing experiment orchestration to pass one shared packet to
+    # both the LLM and deterministic-template conditions.
+    if patient_info is None:
+        if patient_id is None:
+            raise ValueError("Provide either patient_id or patient_info.")
+        patient_idx = get_patient_index(patient_id)
+        patient_info = build_patient_explanation_data_full(patient_idx)
+    elif patient_id is not None and int(patient_info["patient_id"]) != int(patient_id):
+        raise ValueError(
+            f"patient_id {patient_id} does not match patient_info patient "
+            f"{patient_info['patient_id']}."
+        )
     prompt = _build_prompt(patient_info)
 
     # Determine provider and model
@@ -284,9 +326,12 @@ def generate_explanation(patient_id, debug=None, provider=None, model_name=None,
     if debug:
         print("Response received.\n")
 
+    supporting_factors, opposing_factors = _interpretation_factor_names(patient_info)
     return {
         "provider": active_provider,
         "model": model,
         "prompt": prompt,
         "explanation": _extract_text_content(response),
+        "supporting_factors": supporting_factors,
+        "opposing_factors": opposing_factors,
     }

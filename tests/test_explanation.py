@@ -29,6 +29,7 @@ from explanation.explanation_builder import (
     get_patient_index as idx,
     _is_displayable,
 )
+from template_experiment.renderer import generate_template_explanation
 
 # Test patients (see llm_explanation_manual_tests.md).
 NO_FALL, MILD, MODERATE, UNABLE = 101477, 4022, 3207, 3432
@@ -106,6 +107,51 @@ def test_prompt_structure():
     assert prompt.count("Factors Pushing the Prediction Toward") >= 2
     assert llm._HIGHER in prompt and llm._LOWER in prompt
     assert "Patient ID: 3207" in prompt
+
+
+def test_template_accepts_prebuilt_patient_info():
+    """The template can consume the same in-memory evidence packet used by the LLM prompt."""
+    info = build(idx(MODERATE))
+    result = generate_template_explanation(patient_info=info)
+    assert result["evidence"] is info
+    assert result["patient_id"] == MODERATE
+    assert f"Patient ID: {MODERATE}" in result["explanation"]
+
+
+def test_llm_accepts_prebuilt_patient_info_without_rebuilding():
+    """A supplied packet is used directly to construct the LLM prompt."""
+    info = build(idx(MODERATE))
+
+    class _Response:
+        content = "fixture explanation"
+
+    class _FakeLLM:
+        def invoke(self, prompt):
+            self.prompt = prompt
+            return _Response()
+
+    original_builder = llm.build_patient_explanation_data_full
+    original_client = llm.build_langchain_llm
+    llm.build_patient_explanation_data_full = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+        AssertionError("builder must not run when patient_info is supplied")
+    )
+    llm.build_langchain_llm = lambda **_kwargs: _FakeLLM()
+    try:
+        result = llm.generate_explanation(
+            patient_id=MODERATE,
+            patient_info=info,
+            provider="google",
+            debug=False,
+        )
+    finally:
+        llm.build_patient_explanation_data_full = original_builder
+        llm.build_langchain_llm = original_client
+
+    assert result["prompt"] == llm._build_prompt(info)
+    assert result["explanation"] == "fixture explanation"
+    (first_header, first_factors), (second_header, second_factors) = llm._ordered_tables(info)
+    assert result["supporting_factors"] == [f["short_name"] for f in first_factors[:5]]
+    assert result["opposing_factors"] == [f["short_name"] for f in second_factors[:3]]
 
 
 _SAMPLE_DOC = """Clinical Fall Risk Summary for Patient ID: 9999

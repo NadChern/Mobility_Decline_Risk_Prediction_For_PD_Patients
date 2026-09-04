@@ -1,0 +1,4 @@
+method,renders_unseen_no_edits,groups_unseen_no_edits,edits_to_group_new_feature,note
+Generic template,True,False,n/a (never groups),"Generic loop renders any factor list; it never groups, so nothing to maintain."
+Domain template,True,False,1 map entry for an existing category; +1 display label for a new category,Unmapped feature silently falls back to listing; grouping requires new artifacts.
+LLM (Gemini),True,CLAIM — verify,0 (from the same prompt) — VERIFY compositional fidelity,Must be confirmed by generation + re-running the fidelity panel on the new case; neural D2T can hallucinate/omit on unseen combinations.

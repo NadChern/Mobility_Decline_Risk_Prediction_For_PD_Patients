@@ -1,0 +1,2 @@
+# Test dependency for the synthesis evaluation and existing repository tests.
+pytest>=8,<9

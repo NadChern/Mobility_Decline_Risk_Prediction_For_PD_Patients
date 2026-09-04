@@ -1,0 +1,4 @@
+method,templates,grouping_rules,map_entries,category_labels,prompts,embedded_category_examples,interp_sloc,prompt_words
+Generic template,1,0,0,0,0,0,25,0
+Domain template,1,1,21,12,0,0,35,0
+LLM (Gemini),0,0,0,0,1,0,0,199

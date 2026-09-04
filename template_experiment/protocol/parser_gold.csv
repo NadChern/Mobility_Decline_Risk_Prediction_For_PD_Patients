@@ -1,0 +1,17 @@
+case_id,category,prose,expected_relations
+P01,moderate,"Within this model, the result was associated with gait and mobility (FOG (Freezing of Gait), Gait).","[[""supporting"", ""gait_mobility"", [""FOG (Freezing of Gait)"", ""Gait""]]]"
+P02,moderate,"Within this model, the result was associated with motor impairment (UPDRS-III Total, H&Y Stage).","[[""supporting"", ""motor_impairment"", [""H&Y Stage"", ""UPDRS-III Total""]]]"
+P03,moderate,"Factors in the opposite direction included autonomic symptoms (Fainting, Postural Hypotension); however, these did not outweigh the result.","[[""opposing"", ""autonomic_symptoms"", [""Fainting"", ""Postural Hypotension""]]]"
+P04,mild,"The evidence included gait-related measures, specifically FOG (Freezing of Gait) and Gait.","[[""supporting"", ""gait_mobility"", [""FOG (Freezing of Gait)"", ""Gait""]]]"
+P05,moderate,Motor symptoms were represented by Rigidity at Dx and UPDRS-III Total.,"[[""supporting"", ""motor_impairment"", [""Rigidity at Dx"", ""UPDRS-III Total""]]]"
+P06,moderate,The result was associated with gait and mobility.,[]
+P07,moderate,The result was associated with cognition (MoCA).,[]
+P08,moderate,The result mentioned Gait and Mobility Summary.,[]
+P09,moderate,"Although mood symptoms (GDS-15, GDS-15) were noted, the result remained unchanged.",[]
+P10,no_falls,"Factors toward Fall included motor impairment (UPDRS-III Total, Rigidity at Dx).","[[""opposing"", ""motor_impairment"", [""Rigidity at Dx"", ""UPDRS-III Total""]]]"
+P11,moderate,"Within this model, gait assessments (Gait, Postural Stability) were important.","[[""supporting"", ""gait_mobility"", [""Gait"", ""Postural Stability""]]]"
+P12,moderate,"Opposite-direction evidence included sleep/wake symptoms (Daytime Sleepiness, UPDRS-I Total).","[[""opposing"", ""sleep_wake_symptoms"", [""Daytime Sleepiness"", ""UPDRS-I Total""]]]"
+P13,moderate,"The result was associated with autonomic symptoms, supported by Fainting and Lightheadedness on Standing.","[[""supporting"", ""autonomic_symptoms"", [""Fainting"", ""Lightheadedness on Standing""]]]"
+P14,moderate,"The result was associated with disease-course characteristics (PD Duration, Age).","[[""supporting"", ""disease_course"", [""Age"", ""PD Duration""]]]"
+P15,moderate,Gait and MoCA were listed individually without a category.,[]
+P16,moderate,"The result was associated with gait and mobility (FOG (Freezing of Gait), Gait",[]

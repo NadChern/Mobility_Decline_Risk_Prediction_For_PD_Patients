@@ -1,0 +1,69 @@
+def _build_prompt(patient_info):
+    """Build the full-document LLM prompt from the deterministic explanation packet."""
+    pid = patient_info["patient_id"]
+    fp = patient_info["final_prediction"]
+    model_pred_block = _model_prediction_block(patient_info)
+    outcome_phrase = _OUTCOME_PHRASE.get(fp, "prediction")
+    (first_header, first_factors), (second_header, second_factors) = _ordered_tables(patient_info)
+
+    grounding = (
+        f"{first_header}:\n{_bullet_lines(first_factors)}\n\n"
+        f"{second_header}:\n{_bullet_lines(second_factors)}"
+    )
+
+    return f"""You are a clinician explaining a machine-learning fall-risk prediction for a Parkinson's disease patient.
+
+IMPORTANT CONTEXT:
+- The machine-learning model predicts fall risk for a patient with Parkinson's disease.
+- You do NOT make the prediction; you only explain the model's output.
+- Use the provided factors, values, and scales exactly. Do NOT introduce new features, change any value, or move a factor between the two groups.
+- Do NOT infer additional clinical severity or causal relationships.
+- Be clinically neutral and avoid deterministic statements. Do NOT include probabilities, percentages, or model scores.
+- A factor's group shows the direction it pushed the model's prediction, not a clinical judgement of risk. Do NOT describe a factor as clinically "protective" or a "risk factor" unless its Interpretation / Scale text explicitly supports it.
+- When a factor value has an explicit interpretation in the Interpretation / Scale text, use that interpretation (e.g., absence of freezing of gait, normal postural stability, no motor complications).
+- Do not assign additional clinical meaning beyond what is explicitly provided in the Interpretation / Scale text.
+
+DATA (already computed by the model):
+
+Patient ID: {pid}
+Model Prediction:
+{model_pred_block}
+
+{grounding}
+
+TASK:
+Produce the clinician document defined under OUTPUT FORMAT — the Model Prediction header, the two factor tables, and a model interpretation — using only the data above.
+
+INSTRUCTIONS:
+- Build TWO tables exactly as grounded, in the given order and with the given headers. Keep each factor in its group and order; number rows 1..N within each table. For each row: Factor = the name before '|', Patient Value = the value after 'value:', Interpretation / Scale = the FULL text after 'scale/interpretation:'. Reproduce the Interpretation / Scale text EXACTLY and IN FULL — include every scale level and word; do NOT shorten it to the row's matching label, paraphrase it, or omit any part. Copy the Patient Value verbatim too. If a group has no factors, write "No qualifying factors." in place of that table.
+- MODEL INTERPRETATION: write 2-4 sentences explaining the model's {outcome_phrase}.
+  1. Begin with "Within this model, the {outcome_phrase} was primarily associated with …".
+  2. For the top 5 available factors from the FIRST table, identify shared clinical concepts and combine related factors into broader categories. Name the individual factors supporting each category. 
+  3. Apply the same grouping requirement to the top 3 available factors from the SECOND table, and note that they did not outweigh the factors supporting the {outcome_phrase}.
+  4. Group factors only when at least two selected factors share a single clinical construct. Do not create a compound category by joining different constructs merely to group factors. Do not group factors solely because they share the same value, indicate presence or absence, or support the same prediction direction. If a factor does not share one clinical construct with another selected factor, name it individually.
+  5. Use cautious language ("were associated with", "within this model"). Do NOT imply causality. Do NOT describe factors as clinically protective or risky unless the Interpretation / Scale text supports it. Use “no” or “absence of” for a value of 0 only when the supplied Interpretation / Scale indicates that 0 represents absence.
+
+Clinical Fall Risk Summary for Patient ID: {pid}
+
+Model Prediction
+{model_pred_block}
+
+Factors are ordered from most to least influential based on their contribution to the model prediction.
+
+{first_header}
+| # | Factor | Patient Value | Interpretation / Scale |
+| --- | --- | --- | --- |
+[{first_header} rows, numbered 1..N]
+
+{second_header}
+| # | Factor | Patient Value | Interpretation / Scale |
+| --- | --- | --- | --- |
+[{second_header} rows, numbered 1..M]
+
+Model Interpretation
+[2-4 sentence interpretation]
+
+Clinical Note
+- Model predictions are intended to support clinical review and should not replace clinical judgment.
+- The factors shown above identify the patient characteristics that most influenced the model prediction and provide insight into the model’s reasoning.
+- For definitions and interpretation of all variables used by the model, please refer to the Feature Reference Guide (feature_map.xlsx)."""

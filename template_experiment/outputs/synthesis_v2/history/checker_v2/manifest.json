@@ -1,0 +1,15 @@
+{
+  "checker_version": "interpretation-contract-v2-pilot",
+  "code_sha256": {
+    "evaluation/group_claims.py": "2d031d5089689b5cf76132f991b943f5ac1da1f02d95916ffc911486383f34f6",
+    "evaluation/interpretation_contract.py": "ab80273ab812b3b6524a714685d042f050ab6a3023d91bb05b8910ace2d56272",
+    "evaluation/prose_checks.py": "010e21a53e20895492a0c43da1af1c4bda326386178c9418fcf236f5c4436c85",
+    "evaluation/recheck_dataset_a.py": "adcf159db8c9cf854140783349387e78e38ec5ebbe93f2f5d179de187f43bef9",
+    "evaluation/shared.py": "76b32dcc8eaeb30a5ba1459fa1f994cae5d4b3f09cd82d70f779651ee59b00a0",
+    "synthesis_protocol.py": "85e2fff8d0b32593fe9b14d5bde0e2d011858ddc23d5171b0156a06b3f593258",
+    "taxonomy.py": "8a0fd02044fc777d4ce7721ff52337842bedb585e884d3d4a7b47950725bb1ac"
+  },
+  "parser_version": "explicit-group-claims-v2-pilot",
+  "source_records_sha256": "3c2d6b782f3e30533525a5e0039d72bab9998778f472059e7ffcb0965cf866e9",
+  "validation_scope": "Pilot development/recheck, not independent final-test validation"
+}

@@ -44,6 +44,26 @@ LLM_TEMPERATURE = _config['llm']['temperature']
 OPENROUTER_MODEL = _config['llm']['openrouter']['model']
 GOOGLE_MODEL = _config['llm']['google']['model']
 
+# Evaluation-only synthesis-judge settings. Kept separate from the explanation generator so a
+# judge model cannot accidentally replace the production model.
+_synthesis_judge_config = _config.get('evaluation', {}).get('synthesis_judges', {})
+SYNTHESIS_JUDGE_PROVIDER = _synthesis_judge_config.get('provider', 'openrouter')
+SYNTHESIS_JUDGE_TEMPERATURE = _synthesis_judge_config.get('temperature', 0)
+SYNTHESIS_JUDGE_MAX_TOKENS = _synthesis_judge_config.get('max_tokens', 2048)
+SYNTHESIS_JUDGE_REASONING = _synthesis_judge_config.get('reasoning')
+SYNTHESIS_JUDGE_RETEST_PROFILES = _synthesis_judge_config.get('retest_profiles', {})
+SYNTHESIS_JUDGE_REPETITIONS_PER_ORDER = _synthesis_judge_config.get(
+    'repetitions_per_order', 3
+)
+SYNTHESIS_JUDGE_REVERSE_ORDER = _synthesis_judge_config.get('reverse_order', True)
+SYNTHESIS_JUDGE_MODELS = tuple(
+    model['id'] for model in _synthesis_judge_config.get('models', [])
+)
+SYNTHESIS_JUDGE_MODEL_SETTINGS = {
+    model['id']: {key: model[key] for key in ('reasoning', 'max_tokens') if key in model}
+    for model in _synthesis_judge_config.get('models', [])
+}
+
 # Debug mode
 DEBUG = _config.get('debug', False)
 
